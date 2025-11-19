@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whistler's Mother - Voxel Tribute</title>
+    <!-- Load Three.js (r160) from CDN -->
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background-color: #8D8B8E; /* Medium Gray */
+            font-family: 'Inter', sans-serif;
+        }
+        canvas { 
+            display: block; 
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+        }
+        #loading {
+            position: absolute; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%);
+            color: white; 
+            font-weight: 800; 
+            font-size: 1.5rem;
+            pointer-events: none;
+            text-shadow: 0 0 0.25rem black;
+        }
+        #info {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            color: #ccc;
+            font-size: 0.75rem;
+            opacity: 0.7;
+        }
+    </style>
+    
+<script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="loading">Generating Voxel Arrangement...</div>
+    <div id="info">Use mouse to orbit the camera.</div>
+    
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- CONFIGURATION ---
+        const VOXEL_SIZE = 1;
+
+        // Palette inspired by the painting: primarily grayscale with very dark accents.
+        const PALETTE = {
+            wall: 0xAAAAAA,     // Light Gray/Taupe Wall
+            floor: 0x555555,    // Darker Gray Floor
+            curtain: 0x222222,  // Very Dark/Black Curtain
+            dress: 0x111111,    // Deep Black Dress
+            chair: 0x333333,    // Dark Wood Chair
+            stool: 0x666666,    // Small Footstool
+            frame: 0x444444,    // Picture Frame Border
+            picture: 0xBBBBBB,  // Light/White Head covering (used for bonnet)
+            skin: 0xFFDAB9      // Pale skin tone (for contrast)
+        };
+
+        // --- SCENE SETUP ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(PALETTE.wall);
+        // Fog further reduced by increasing the "far" distance (120 -> 170)
+        scene.fog = new THREE.Fog(PALETTE.wall, 40, 170);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
+        // Position camera adjusted to zoom out further for better mobile visibility
+        camera.position.set(30, 35, 70); 
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.target.set(0, 10, 0); // Center focus on the figure
+
+        // --- LIGHTING ---
+        // Mimic the soft, slightly directional lighting in the room
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+        scene.add(ambientLight);
+
+        // Directional light from the side (where the curtain/window would be)
+        const sideLight = new THREE.DirectionalLight(0xffffff, 1.0);
+        sideLight.position.set(-20, 30, 10);
+        sideLight.castShadow = true;
+        sideLight.shadow.mapSize.width = 1024;
+        sideLight.shadow.mapSize.height = 1024;
+        sideLight.shadow.camera.near = 1;
+        sideLight.shadow.camera.far = 100;
+        sideLight.shadow.camera.left = -30;
+        sideLight.shadow.camera.right = 30;
+        sideLight.shadow.camera.top = 30;
+        sideLight.shadow.camera.bottom = -30;
+        scene.add(sideLight);
+
+        // --- VOXEL ENGINE ---
+        const geometries = [];
+        const boxGeo = new THREE.BoxGeometry(VOXEL_SIZE, VOXEL_SIZE, VOXEL_SIZE);
+
+        // Group voxels by color for InstancedMesh
+        const voxelsByColor = {};
+
+        function addVoxel(x, y, z, colorHex) {
+            const colorStr = '0x' + colorHex.toString(16).padStart(6, '0');
+            if (!voxelsByColor[colorStr]) {
+                voxelsByColor[colorStr] = [];
+            }
+            voxelsByColor[colorStr].push({ x, y, z });
+        }
+        
+        // --- SCENE BUILDER FUNCTIONS ---
+
+        function buildRoom() {
+            const width = 40;
+            const height = 30;
+            const depth = 30;
+
+            // 1. Floor
+            for (let x = -width/2; x < width/2; x++) {
+                for (let z = -depth/2; z < depth/2; z++) {
+                    addVoxel(x, 0, z, PALETTE.floor);
+                }
+            }
+            
+            // 2. Back Wall (Plane in the painting)
+            for (let x = -width/2; x < width/2; x++) {
+                for (let y = 1; y < height; y++) {
+                    addVoxel(x, y, -depth/2 + 1, PALETTE.wall);
+                }
+            }
+
+            // 3. Left Wall (Curtain side)
+            for (let z = -depth/2 + 1; z < depth/2; z++) {
+                for (let y = 1; y < height; y++) {
+                    addVoxel(-width/2 + 1, y, z, PALETTE.wall);
+                }
+            }
+        }
+        
+        function buildCurtain() {
+            const curtainX = -18;
+            const curtainZ = -12;
+            const curtainHeight = 25;
+            const curtainWidth = 5;
+            
+            // The black fabric curtain on the left
+            for(let x = 0; x < curtainWidth; x++) {
+                for(let y = 1; y < curtainHeight; y++) {
+                    // Slight wave/texture effect
+                    const zOffset = Math.sin(y * 0.5 + x * 0.8) * 0.3;
+                    addVoxel(curtainX + x, y, curtainZ + Math.round(zOffset), PALETTE.curtain);
+                }
+            }
+            
+            // Small footstool in front of the curtain
+            const stoolX = curtainX + 1;
+            const stoolZ = curtainZ + 2;
+            for (let x=0; x<3; x++) {
+                for (let z=0; z<2; z++) {
+                    addVoxel(stoolX + x, 1, stoolZ + z, PALETTE.stool);
+                }
+            }
+        }
+
+        function buildFigureAndChair() {
+            const centerX = 0;
+            const centerY = 0;
+            const centerZ = 0;
+
+            // 1. CHAIR (Side View - minimal profile structure)
+            const chairZ = centerZ + 1; // Back of the chair is at Z+1, body at Z=0
+            const chairHeight = 15;
+            
+            // Chair Seat (Y=5) - Now thinner, only 1 voxel deep
+            addVoxel(centerX - 2, 5, chairZ, PALETTE.chair);
+            addVoxel(centerX - 1, 5, chairZ, PALETTE.chair);
+            addVoxel(centerX, 5, chairZ, PALETTE.chair);
+            addVoxel(centerX + 1, 5, chairZ, PALETTE.chair);
+
+            // Chair Back (X=2, just one line for the top/side)
+            for(let y=5; y<chairHeight; y++) {
+                addVoxel(centerX + 2, y, chairZ, PALETTE.chair);
+            }
+            
+            // Chair Legs (X=-2, X=2)
+            for(let y=1; y<5; y++) {
+                addVoxel(centerX - 2, y, chairZ, PALETTE.chair);
+                addVoxel(centerX + 2, y, chairZ, PALETTE.chair);
+            }
+
+            // 2. FIGURE (Mother's Shape) - Sitting in profile, facing +X (more rounded/defined)
+            const figureX = centerX;
+            
+            // Dress - The large, sweeping black mass
+            // Skirt base (Wider base for visual weight)
+            for(let x = -4; x < 3; x++) {
+                for(let z = -1; z < 1; z++) { // Give it a slight depth of 2 voxels
+                     addVoxel(figureX + x, 1, centerZ + z, PALETTE.dress);
+                     addVoxel(figureX + x, 2, centerZ + z, PALETTE.dress);
+                }
+            }
+            
+            // Skirt middle
+            for(let x = -3; x < 2; x++) {
+                for(let z = -1; z < 1; z++) {
+                    for(let y = 3; y < 6; y++) {
+                        addVoxel(figureX + x, y, centerZ + z, PALETTE.dress);
+                    }
+                }
+            }
+
+            // Torso/Upper Body (Sitting up straight, placed slightly behind the chair back)
+            for(let x = -1; x < 2; x++) {
+                for(let z = -1; z < 1; z++) {
+                    for(let y = 6; y < 14; y++) {
+                        addVoxel(figureX + x, y, centerZ + z, PALETTE.dress);
+                    }
+                }
+            }
+            
+            // Head/Face (The profile silhouette)
+            const headY = 14;
+            const headX = 2; 
+            const headZ = 0;
+            
+            // 1. Face/Profile (A single voxel to represent the distinct pale face)
+            addVoxel(headX, headY, headZ, PALETTE.skin);
+            
+            // 2. Bonnet/Cap (The distinct white shape, more pronounced and aligned)
+            // This attempts to capture the triangular, somewhat pointed shape from the painting.
+            addVoxel(headX + 1, headY, headZ, PALETTE.picture);      // Back of neck/lower cap
+            addVoxel(headX + 1, headY + 1, headZ, PALETTE.picture);  // Middle part of cap
+            addVoxel(headX + 1, headY + 2, headZ, PALETTE.picture);  // Top back of cap
+            addVoxel(headX, headY + 2, headZ, PALETTE.picture);      // Top front of cap (above face)
+            addVoxel(headX -1, headY + 1, headZ, PALETTE.picture);    // Peak of the bonnet
+
+            // Connects head to dress
+            addVoxel(headX, headY-1, headZ, PALETTE.dress);
+        }
+        
+        function buildPictureFrame() {
+            const frameX = -10;
+            const frameY = 18;
+            const frameZ = -13; // On the back wall
+
+            const frameWidth = 10;
+            const frameHeight = 6;
+            
+            // Frame border
+            for(let x=0; x<frameWidth; x++) {
+                addVoxel(frameX + x, frameY, frameZ, PALETTE.frame);
+                addVoxel(frameX + x, frameY + frameHeight - 1, frameZ, PALETTE.frame);
+            }
+            for(let y=0; y<frameHeight; y++) {
+                addVoxel(frameX, frameY + y, frameZ, PALETTE.frame);
+                addVoxel(frameX + frameWidth - 1, frameY + y, frameZ, PALETTE.frame);
+            }
+
+            // Inner picture content (A simple block of lighter gray)
+            for(let x=1; x<frameWidth-1; x++) {
+                for(let y=1; y<frameHeight-1; y++) {
+                    addVoxel(frameX + x, frameY + y, frameZ, 0xCCCCCC);
+                }
+            }
+        }
+
+        // --- GENERATE SCENE CONTENT ---
+        buildRoom();
+        buildCurtain();
+        buildFigureAndChair();
+        buildPictureFrame();
+
+        // --- RENDERING VOXELS ---
+        // Convert the data structure into InstancedMesh for efficient rendering
+        const voxelGroup = new THREE.Group();
+        
+        Object.entries(voxelsByColor).forEach(([colorStr, positions]) => {
+            const color = parseInt(colorStr);
+            const geometry = boxGeo;
+            // Use a MeshPhongMaterial for a bit more pronounced shadow/light effect
+            const material = new THREE.MeshStandardMaterial({ 
+                color: color, 
+                roughness: 0.8,
+                metalness: 0.1
+            });
+            const mesh = new THREE.InstancedMesh(geometry, material, positions.length);
+            
+            const dummy = new THREE.Object3D();
+            
+            positions.forEach((pos, i) => {
+                dummy.position.set(pos.x, pos.y, pos.z);
+                dummy.updateMatrix();
+                mesh.setMatrixAt(i, dummy.matrix);
+            });
+            
+            // The figure needs to cast a strong shadow
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            voxelGroup.add(mesh);
+        });
+
+        scene.add(voxelGroup);
+        document.getElementById('loading').style.display = 'none';
+
+        // --- ANIMATION LOOP ---
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update(); // only required if controls.enableDamping is set to true
+            renderer.render(scene, camera);
+        }
+
+        // Resize handler
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+
+    </script>
+</body>
+</html>

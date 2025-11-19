@@ -93,18 +93,23 @@
         scene.add(sunLight);
 
         // --- VOXEL ENGINE ---
-        const voxelsByColor = {};
+        // Separate voxel storage for static elements and the dynamic parasol
+        const staticVoxelsByColor = {}; 
+        const dynamicVoxelsByColor = {}; 
+        let parasolMeshGroup; 
+        
         const boxGeo = new THREE.BoxGeometry(VOXEL_SIZE, VOXEL_SIZE, VOXEL_SIZE);
 
         /**
          * Adds a single voxel to the scene data structure.
+         * @param {object} targetMap The map (staticVoxelsByColor or dynamicVoxelsByColor) to add the voxel to.
          */
-        function addVoxel(x, y, z, colorHex) {
+        function addVoxel(x, y, z, colorHex, targetMap = staticVoxelsByColor) {
             const colorStr = '0x' + colorHex.toString(16).padStart(6, '0');
-            if (!voxelsByColor[colorStr]) {
-                voxelsByColor[colorStr] = [];
+            if (!targetMap[colorStr]) {
+                targetMap[colorStr] = [];
             }
-            voxelsByColor[colorStr].push({ x, y, z });
+            targetMap[colorStr].push({ x, y, z });
         }
 
         // --- SCENE BUILDER FUNCTIONS ---
@@ -189,12 +194,13 @@
         }
 
         function buildParasol(x, y, z) {
+            const targetMap = dynamicVoxelsByColor; // Use the dynamic map for animation
             const poleColor = PALETTE.parasolPole;
             const canvasColor = PALETTE.parasolCanvas;
 
             // Pole
             for (let i = 0; i < 15; i++) {
-                addVoxel(x, y + i, z, poleColor);
+                addVoxel(x, y + i, z, poleColor, targetMap);
             }
 
             // Canvas (Dome Shape - approximated with voxels)
@@ -204,10 +210,10 @@
                     const distSq = dx * dx + dz * dz;
                     if (distSq < radius * radius) {
                         // Top layer
-                        addVoxel(x + dx, y + 15, z + dz, canvasColor);
+                        addVoxel(x + dx, y + 15, z + dz, canvasColor, targetMap);
                         // Bottom layer
                         if (distSq > (radius - 1.5) * (radius - 1.5)) {
-                             addVoxel(x + dx, y + 14, z + dz, canvasColor);
+                             addVoxel(x + dx, y + 14, z + dz, canvasColor, targetMap);
                         }
                     }
                 }
@@ -290,11 +296,11 @@
         const centerX = 8;
         const centerZ = 8;
 
-        // Parasol
+        // Parasol - Now built using dynamicVoxelsByColor
         buildParasol(centerX, -1, centerZ + 2);
 
+        // Figures - All built using staticVoxelsByColor (default)
         // Figure 1: Woman with Child (Center-Left)
-        // Pose: Holding something, looking slightly right.
         buildFigure(centerX - 5, -2, centerZ + 1, 6, -Math.PI * 0.1, {
             torso: PALETTE.dressBrown,
             hat: PALETTE.shawl,
@@ -309,7 +315,6 @@
         ]);
 
         // Figure 2: Woman with Umbrella/Sketchpad (Center-Right)
-        // Pose: Tall figure, facing the center.
         buildFigure(centerX + 2, -2, centerZ - 1, 6, Math.PI * 0.2, {
             torso: PALETTE.dressBrown,
             hat: PALETTE.hatDark,
@@ -325,12 +330,11 @@
         });
         
         // Figure 4: Child Standing on Ground (Moved from wall)
-        // Positioned back on the ground level (y=-2)
         buildFigure(20, -2, -5, 4, -Math.PI * 0.5, {
             torso: PALETTE.childBlue,
             hat: PALETTE.hatDark,
             legs: PALETTE.childBlue
-        }); // Uses default standing pose
+        }); 
         
         // Figure 5: Child with Dark Cap (Sitting on a rock)
         buildFigure(15, 0, 10, 3, Math.PI * 0.7, {
@@ -357,39 +361,55 @@
         ]);
 
         // --- RENDERING VOXELS ---
-        // Convert the data structure into InstancedMesh for efficient rendering
-        const voxelGroup = new THREE.Group();
-        
-        Object.entries(voxelsByColor).forEach(([colorStr, positions]) => {
-            const color = parseInt(colorStr);
-            const geometry = boxGeo;
-            const material = new THREE.MeshStandardMaterial({ 
-                color: color, 
-                roughness: 0.8,
-                metalness: 0.1 
+        /**
+         * Converts a voxel data map into a single InstancedMesh group.
+         */
+        function createInstancedVoxelGroup(voxelDataMap) {
+            const group = new THREE.Group();
+            Object.entries(voxelDataMap).forEach(([colorStr, positions]) => {
+                const color = parseInt(colorStr);
+                const material = new THREE.MeshStandardMaterial({ 
+                    color: color, 
+                    roughness: 0.8,
+                    metalness: 0.1 
+                });
+                const mesh = new THREE.InstancedMesh(boxGeo, material, positions.length);
+                const dummy = new THREE.Object3D();
+                
+                positions.forEach((pos, i) => {
+                    dummy.position.set(pos.x, pos.y, pos.z);
+                    dummy.updateMatrix();
+                    mesh.setMatrixAt(i, dummy.matrix);
+                });
+                
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                group.add(mesh);
             });
-            const mesh = new THREE.InstancedMesh(geometry, material, positions.length);
-            
-            const dummy = new THREE.Object3D();
-            
-            positions.forEach((pos, i) => {
-                dummy.position.set(pos.x, pos.y, pos.z);
-                dummy.updateMatrix();
-                mesh.setMatrixAt(i, dummy.matrix);
-            });
-            
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
-            voxelGroup.add(mesh);
-        });
+            return group;
+        }
 
-        scene.add(voxelGroup);
+        // 1. Render Static Voxels (Ground, Figures, Wall, Trees)
+        const staticVoxelGroup = createInstancedVoxelGroup(staticVoxelsByColor);
+        scene.add(staticVoxelGroup);
+
+        // 2. Render Dynamic Voxels (Parasol)
+        parasolMeshGroup = createInstancedVoxelGroup(dynamicVoxelsByColor);
+        scene.add(parasolMeshGroup);
+        
         document.getElementById('loading').style.display = 'none';
 
         // --- ANIMATION LOOP ---
         function animate() {
             requestAnimationFrame(animate);
             controls.update();
+
+            // Apply subtle wind movement (rotation around the Y-axis) to the parasol group
+            if (parasolMeshGroup) {
+                // Uses a sine wave to create a smooth, oscillating movement
+                parasolMeshGroup.rotation.y = Math.sin(Date.now() * 0.0005) * 0.05; 
+            }
+            
             renderer.render(scene, camera);
         }
 

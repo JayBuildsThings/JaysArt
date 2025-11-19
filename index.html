@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jay's Art Collection - Voxel Edition</title>
+    
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        /* Custom styles to enhance the voxel gallery feel */
+        :root {
+            --primary-color: #2c3e50; /* Darker blue-gray for text */
+            --background-color: #e0f2f7; /* Lighter blue background */
+            --accent-color: #7fbcf2; /* Your provided light blue */
+            --secondary-accent-color: #4a90e2; /* A slightly deeper blue for contrast */
+            --border-color: #2c3e50; /* Dark borders for cartoon/voxel outline look */
+            --shadow-color: #1a2633; /* Sharp dark shadow */
+            --font-pixel: "Press Start 2P", cursive; /* Pixel font for titles */
+            --font-sans: "Inter", sans-serif; /* For body text */
+        }
+
+        /* Google Fonts - Press Start 2P for pixelated effect */
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            min-height: 100vh;
+            line-height: 1.6;
+            
+            /* Voxel Grid Background Pattern */
+            background-image: 
+                linear-gradient(rgba(74, 144, 226, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(74, 144, 226, 0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* Voxel-like card styling - Sharp Corners, Thick Borders */
+        .gallery-card, .detail-card {
+            position: relative;
+            border: 4px solid var(--border-color);
+            box-shadow: 8px 8px 0px 0px var(--shadow-color); /* Deep, sharp shadow */
+            transition: all 0.1s ease; /* Faster transition for mechanical feel */
+            cursor: pointer;
+            background-color: #ffffff;
+            border-radius: 0; /* Sharp edges for voxel look */
+        }
+
+        .gallery-card:hover {
+            transform: translate(-2px, -2px); /* Lift effect */
+            box-shadow: 10px 10px 0px 0px var(--shadow-color);
+        }
+        
+        .gallery-card:active {
+            transform: translate(4px, 4px); /* Press down effect */
+            box-shadow: 4px 4px 0px 0px var(--shadow-color);
+        }
+        
+        .gallery-card img {
+            border: 2px solid var(--border-color); /* Thicker image borders */
+            image-rendering: pixelated; /* Enhance pixel feel for images */
+            border-radius: 0;
+        }
+
+        .painting-link {
+            color: var(--secondary-accent-color);
+            text-decoration: none;
+            border-bottom: 2px solid var(--border-color);
+            padding: 2px;
+            transition: background-color 0.2s;
+        }
+        .painting-link:hover {
+            background-color: var(--accent-color);
+            color: white;
+        }
+
+        .app-header {
+            background-color: var(--accent-color);
+            border-bottom: 4px solid var(--border-color);
+            /* Reduced vertical padding in CSS, relying on Tailwind's py-3/py-4 for mobile context */
+            padding: 1rem 0; 
+        }
+
+        .app-header h1, .pixel-text {
+            font-family: var(--font-pixel);
+            color: white; 
+            text-shadow: 3px 3px 0px var(--border-color); /* Hard outline shadow */
+            font-size: clamp(1rem, 4vw, 2rem);
+            line-height: 1.4;
+        }
+
+        /* Voxel Button Styling */
+        .voxel-btn {
+            font-family: var(--font-pixel);
+            text-transform: uppercase;
+            border: 3px solid var(--border-color);
+            box-shadow: 4px 4px 0px 0px var(--shadow-color);
+            transition: all 0.1s;
+            border-radius: 0; /* Sharp corners */
+        }
+        
+        .voxel-btn:hover {
+            transform: translate(-1px, -1px);
+            box-shadow: 5px 5px 0px 0px var(--shadow-color);
+        }
+
+        .voxel-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px 0px var(--shadow-color);
+        }
+
+        .back-button {
+            background-color: var(--secondary-accent-color);
+            color: white;
+            font-size: 0.7rem;
+            padding: 0.8rem 1.2rem;
+        }
+
+        .install-prompt-container {
+            background-color: #fff;
+            border-top: 4px solid var(--border-color);
+            box-shadow: 0 -4px 0px 0px rgba(0,0,0,0.1);
+        }
+
+        .install-button {
+            background-color: var(--accent-color);
+            color: white;
+        }
+        
+        .close-prompt-button {
+            background-color: #ff6b6b; /* Red for close/cancel */
+            color: white;
+        }
+
+        /* Headings within content */
+        h2.content-heading {
+            font-family: var(--font-pixel);
+            color: var(--primary-color);
+            border-bottom: 4px solid var(--border-color);
+            padding-bottom: 0.8rem;
+            margin-bottom: 1.5rem;
+            font-size: clamp(1rem, 3vw, 1.2rem);
+            text-transform: uppercase;
+        }
+    </style>
+
+    <!-- 
+        PWA Manifest - Embedded using a Data URL.
+    -->
+    <link rel="manifest" href="data:application/json;base64,
+        eyJhbGciOiJSUzI1NiIsImtpZCI6IjRiMzQ3YzUyZGI2YjkwODMyNjcwY2M5YTBlMGUzMjlmMGU3MDBkNjQifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhdWQiOiJodHRwczovL2dlbmVyYXRpdmVsYW5ndWFnZS5nb29nbGVhcGlzLmNvbS92MWJldGEvbW9kZWxzL2dlbWluaS0yLjUtZmxhc2gtcHJldmlldy0wOS0yMDI1OmdlbmVyYXRlQ29udGVudCIsImlhdCI6MTYzODQyNDgwMCwiZXhwIjoxNjM4NDI4NDAwLCJzdWIiOiIxMTQzMjUyMzAwMDAwMDAwMDAwMCIsInByb21wdCI6IldyaXRlIGFuIGVzc2F5IG9uIHRoZSBzdGFnZXMgb2YgbWl0b3NpcyIsImVzc2F5VHlwZSI6IjUwMC13b3JkIGVzc2F5IiwiZXNzYXlQcm9tcHQiOiJzdGFnZXMgb2YgbWl0b3NpcyJ9
+    ">
+
+</head>
+<body>
+
+    <div id="app" class="min-h-screen flex flex-col">
+        <!-- Header -->
+        <header class="app-header sticky top-0 z-10">
+            <!-- Ensure top/bottom padding is appropriate for mobile -->
+            <div class="max-w-4xl mx-auto px-4 py-3 sm:py-4 flex justify-between items-center">
+                <h1 id="header-title" class="pixel-text">
+                    Jay's Art<br>Collection
+                </h1>
+                <button id="back-button" onclick="goToHome()" 
+                        class="hidden voxel-btn back-button">
+                    ← BACK
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content View -->
+        <main class="max-w-4xl mx-auto px-4 py-8 flex-grow w-full">
+            <div id="content-container">
+                <!-- Content injected by JavaScript -->
+            </div>
+        </main>
+        
+        <!-- PWA Install Banner/Modal - Optimized for mobile stacking and size -->
+        <div id="install-prompt-container" 
+             class="install-prompt-container fixed bottom-0 left-0 w-full p-3 hidden z-20 text-center border-t-4 border-gray-900">
+            <div class="max-w-4xl mx-auto flex flex-col sm:flex-row justify-between items-center w-full">
+                <!-- Text made smaller and margin reduced -->
+                <p class="text-xs mb-2 sm:mb-0 pixel-text text-gray-800 !text-shadow-none">
+                    INSTALL APP TO YOUR DEVICE?
+                </p>
+                <!-- Buttons stacked vertically on small screen, then horizontal on sm+ -->
+                <div class="space-x-2 flex mt-2 sm:mt-0">
+                    <button id="install-button" class="voxel-btn install-button py-1 px-3 text-xs">
+                        INSTALL
+                    </button>
+                    <button id="close-prompt-button" class="voxel-btn close-prompt-button py-1 px-3 text-xs" onclick="hideInstallPrompt(true)">
+                        NOT NOW
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // --- 1. DATA STRUCTURE ---
+        const data = {
+            galleries: [
+                {
+                    id: 'orsay',
+                    name: 'Orsay Museum, Paris',
+                    subtitle: 'Impressionist and Post-Impressionist masterpieces.',
+                    image: 'https://placehold.co/400x250/2c3e50/a7d9f7?text=Orsay+Gallery', 
+                    paintings: [
+                        { id: 'bal_du_moulin', title: 'Bal du moulin de la Galette (Renoir)', externalUrl: 'bal_du_moulin_voxel.html' },
+                        { id: 'starry_night', title: 'The Starry Night (Van Gogh, Placeholder Example)', externalUrl: 'starry_night_voxel.html' },
+                        { id: 'whistler_mother', title: 'Arrangement in Grey and Black No. 1 (Whistler)', externalUrl: 'whistler_mother_voxel.html' }
+                    ]
+                }
+                // Future galleries will be added here
+            ]
+        };
+
+        // --- 2. STATE & UI ELEMENTS ---
+        let currentView = 'home';
+        let selectedGalleryId = null;
+        let deferredInstallPrompt = null;
+        
+        const contentContainer = document.getElementById('content-container');
+        const headerTitle = document.getElementById('header-title');
+        const backButton = document.getElementById('back-button');
+        const installPromptContainer = document.getElementById('install-prompt-container');
+        const installButton = document.getElementById('install-button');
+
+        // --- 3. RENDERING FUNCTIONS ---
+
+        /**
+         * Renders the main gallery list view.
+         */
+        function renderHomeView() {
+            currentView = 'home';
+            selectedGalleryId = null;
+            headerTitle.innerHTML = "JAY'S ART<br>COLLECTION"; 
+            backButton.classList.add('hidden');
+            
+            let html = '<h2 class="content-heading">SELECT A GALLERY</h2>';
+            html += '<div class="grid grid-cols-1 md:grid-cols-2 gap-8">';
+            
+            data.galleries.forEach(gallery => {
+                html += `
+                    <div class="gallery-card p-6 flex flex-col items-start" 
+                         onclick="goToGallery('${gallery.id}')">
+                        <div class="w-full border-2 border-gray-800 mb-4 bg-gray-100">
+                             <img src="${gallery.image}" 
+                                 onerror="this.onerror=null;this.src='https://placehold.co/150x100/2c3e50/a7d9f7?text=GALLERY'"
+                                 alt="${gallery.name}" 
+                                 class="w-full h-40 object-cover block">
+                        </div>
+                        <div class="w-full">
+                            <h3 class="pixel-text !text-primary-color !text-shadow-none text-sm sm:text-base mb-2 leading-tight">${gallery.name.toUpperCase()}</h3>
+                            <p class="text-xs font-sans text-gray-600 mb-4 border-l-4 border-gray-300 pl-2">${gallery.subtitle}</p>
+                            <button class="voxel-btn w-full bg-yellow-400 text-black py-2 text-xs hover:bg-yellow-300">
+                                ENTER GALLERY
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            contentContainer.innerHTML = html;
+        }
+
+        /**
+         * Renders the detail view for a specific gallery.
+         * @param {object} gallery - The gallery object to display.
+         */
+        function renderGalleryDetail(gallery) {
+            currentView = 'galleryDetail';
+            selectedGalleryId = gallery.id;
+            headerTitle.innerHTML = gallery.name.toUpperCase();
+            backButton.classList.remove('hidden');
+
+            let html = `
+                <h2 class="content-heading">${gallery.subtitle.toUpperCase()}</h2>
+                <div class="detail-card p-6">
+                    <h3 class="pixel-text !text-primary-color !text-shadow-none text-sm mb-6 border-b-4 border-gray-800 pb-2">
+                        PAINTINGS DISCOVERED
+                    </h3>
+                    <ul class="space-y-4">
+            `;
+
+            gallery.paintings.forEach((painting, index) => {
+                html += `
+                    <li class="flex flex-col sm:flex-row justify-between items-start sm:items-center py-3 border-b-2 border-dashed border-gray-300 last:border-b-0">
+                        <div class="flex items-center mb-2 sm:mb-0">
+                            <span class="font-pixel text-xs mr-3 bg-gray-200 px-2 py-1 border border-gray-400">#${index + 1}</span>
+                            <span class="text-gray-800 font-bold text-sm font-sans">${painting.title}</span>
+                        </div>
+                        <a href="${painting.externalUrl}" target="_blank" class="voxel-btn bg-blue-100 text-blue-800 text-xs px-3 py-2 hover:bg-blue-200 flex items-center">
+                            VIEW VOXEL ART
+                            <span class="ml-2">►</span>
+                        </a>
+                    </li>
+                `;
+            });
+
+            html += `
+                    </ul>
+                    <div class="mt-8 bg-yellow-50 border-2 border-yellow-200 p-4 text-xs text-gray-600 font-sans">
+                        <strong>SYSTEM NOTICE:</strong><br>
+                        LINKS OPEN EXTERNAL FILES (e.g., \`${gallery.paintings[0].externalUrl}\`). ENSURE THESE EXIST IN REPO.
+                    </div>
+                </div>
+            `;
+            contentContainer.innerHTML = html;
+        }
+
+        // --- 4. NAVIGATION LOGIC ---
+
+        function goToHome() {
+            renderHomeView();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function goToGallery(id) {
+            const gallery = data.galleries.find(g => g.id === id);
+            if (gallery) {
+                renderGalleryDetail(gallery);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                console.error('Gallery not found:', id);
+            }
+        }
+
+        // --- 5. PWA INSTALLATION LOGIC ---
+
+        const INSTALL_PROMPT_KEY = 'installPromptStatus'; 
+        const REJECT_TIMESTAMP_KEY = 'installPromptRejectTimestamp'; 
+        const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
+
+        function shouldShowInstallPrompt() {
+            const status = localStorage.getItem(INSTALL_PROMPT_KEY);
+            const rejectTimestamp = parseInt(localStorage.getItem(REJECT_TIMESTAMP_KEY), 10);
+            
+            if (status === 'accepted') return false;
+            if (!status) return true; 
+            if (status === 'rejected') {
+                return (Date.now() - rejectTimestamp) > TEN_DAYS_MS;
+            }
+            return false; 
+        }
+
+        function hideInstallPrompt(wasRejected = false) {
+            installPromptContainer.classList.add('hidden');
+            if (wasRejected) {
+                localStorage.setItem(INSTALL_PROMPT_KEY, 'rejected');
+                localStorage.setItem(REJECT_TIMESTAMP_KEY, Date.now().toString());
+            } else {
+                localStorage.setItem(INSTALL_PROMPT_KEY, 'accepted');
+            }
+        }
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredInstallPrompt = e;
+            if (shouldShowInstallPrompt()) {
+                installPromptContainer.classList.remove('hidden');
+            }
+        });
+
+        installButton.addEventListener('click', async () => {
+            if (deferredInstallPrompt) {
+                deferredInstallPrompt.prompt();
+                const { outcome } = await deferredInstallPrompt.userChoice;
+                
+                if (outcome === 'accepted') {
+                    hideInstallPrompt(false); 
+                } else {
+                    hideInstallPrompt(true); 
+                }
+                deferredInstallPrompt = null;
+            } else {
+                // IMPORTANT: Using custom modal instead of alert() for mobile friendliness
+                // For this example, we'll log, but in a real app, a custom modal UI would display.
+                console.log("Use your browser's 'Add to Home Screen' to install.");
+            }
+        });
+
+        // --- 6. INITIALIZATION ---
+
+        window.onload = function() {
+            goToHome();
+        };
+
+    </script>
+</body>
+</html>

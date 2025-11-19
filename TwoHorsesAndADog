@@ -345,9 +345,8 @@
         
         // The rotation angle: The horse model faces +X initially.
         // We need them to face the camera which is towards the -Z axis.
-        // Previous value: Math.PI * 0.5 + Math.PI (270 degrees) was facing away (+Z).
-        // To rotate 180 degrees, we change it to Math.PI * 0.5 (90 degrees) to face the camera (-Z).
-        const horseAndDogRotation = Math.PI * 0.5; // Rotated 180 degrees from the previous position to face the camera (-Z direction)
+        // Rotation is set to Math.PI * 0.5 (90 degrees)
+        const horseAndDogRotation = Math.PI * 0.5; 
 
         const frontZ = 8; 
         const brownHorseX = -2; 

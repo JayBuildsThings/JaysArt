@@ -17,12 +17,12 @@
             --secondary-accent-color: #4a90e2; /* A slightly deeper blue for contrast */
             --border-color: #2c3e50; /* Dark borders for cartoon/voxel outline look */
             --shadow-color: #1a2633; /* Sharp dark shadow */
-            --font-pixel: "Press Start 2P", cursive; /* Pixel font for titles */
-            --font-sans: "Inter", sans-serif; /* For body text */
+            /* Removed --font-pixel for readability */
+            --font-sans: "Inter", sans-serif; /* For all text */
         }
 
-        /* Google Fonts - Press Start 2P for pixelated effect */
-        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        /* Google Fonts - Keep Inter as the main font */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap');
 
         body {
             font-family: var(--font-sans);
@@ -80,32 +80,25 @@
         .app-header {
             background-color: var(--accent-color);
             border-bottom: 4px solid var(--border-color);
-            /* Reduced vertical padding in CSS, relying on Tailwind's py-3/py-4 for mobile context */
             padding: 1rem 0; 
         }
 
+        /* UPDATED: Main header now uses Inter, is heavy, bold, and spaced out */
         .app-header h1, .pixel-text {
-            font-family: var(--font-pixel);
+            font-family: var(--font-sans); /* Now readable Inter font */
+            font-weight: 900; /* Extra heavy weight */
+            text-transform: uppercase;
+            letter-spacing: 0.1em; /* Spaced for prominence */
             color: white; 
-            text-shadow: 3px 3px 0px var(--border-color); /* Hard outline shadow */
+            text-shadow: 3px 3px 0px var(--border-color); /* Hard outline shadow retained */
             font-size: clamp(1rem, 4vw, 2rem);
-            line-height: 1.4;
+            line-height: 1.2; /* Tightened line height */
         }
         
-        /* FIX: Ensure main app header is readable on small screens */
-        @media (max-width: 639px) { 
-            .app-header h1 {
-                font-family: var(--font-sans); /* Switch to Inter */
-                text-shadow: none; /* Remove chunky pixel shadow */
-                font-weight: 900; /* Make it extra bold */
-                letter-spacing: 0.05em; 
-                font-size: 1.5rem; /* Ensure a minimum readable size */
-            }
-        }
-
         /* Voxel Button Styling */
         .voxel-btn {
-            font-family: var(--font-pixel);
+            font-family: var(--font-sans); /* Now readable Inter font */
+            font-weight: 800; /* Heavy weight */
             text-transform: uppercase;
             border: 3px solid var(--border-color);
             box-shadow: 4px 4px 0px 0px var(--shadow-color);
@@ -148,25 +141,24 @@
 
         /* Headings within content - IMPROVED READABILITY */
         h2.content-heading {
-            /* Switched to readable sans-serif font for the subtitle */
             font-family: var(--font-sans); 
-            font-weight: 800; /* Added weight for prominence */
+            font-weight: 800; 
             color: var(--primary-color);
             border-bottom: 4px solid var(--border-color);
             padding-bottom: 0.8rem;
             margin-bottom: 1.5rem;
-            /* Increased size */
             font-size: clamp(1.2rem, 4vw, 1.5rem); 
             text-transform: uppercase;
-            letter-spacing: 0.1em; /* Added subtle letter spacing for readability */
+            letter-spacing: 0.1em; 
         }
         
         /* New style for the H3 inside the detail card - PAINTINGS DISCOVERED */
         .card-subheading {
-            font-family: var(--font-pixel);
-            color: black; /* Ensuring black for contrast */
+            font-family: var(--font-sans); /* Now readable Inter font */
+            font-weight: 800; /* Heavy weight */
+            text-transform: uppercase;
+            color: black; 
             text-shadow: none; 
-            /* Increased size slightly for easier parsing */
             font-size: clamp(0.9rem, 3vw, 1.1rem); 
             margin-bottom: 1.5rem; 
             border-bottom: 4px solid var(--border-color);
@@ -327,7 +319,7 @@
                 html += `
                     <li class="flex flex-col sm:flex-row justify-between items-start sm:items-center py-3 border-b-2 border-dashed border-gray-300 last:border-b-0">
                         <div class="flex items-center mb-2 sm:mb-0">
-                            <span class="font-pixel text-xs mr-3 bg-gray-200 px-2 py-1 border border-gray-400">#${index + 1}</span>
+                            <span class="font-sans font-bold text-xs mr-3 bg-gray-200 px-2 py-1 border border-gray-400">#${index + 1}</span>
                             <span class="text-gray-800 font-bold text-sm font-sans">${painting.title}</span>
                         </div>
                         <a href="${painting.externalUrl}" target="_blank" class="voxel-btn bg-blue-100 text-blue-800 text-xs px-3 py-2 hover:bg-blue-200 flex items-center">

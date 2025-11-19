@@ -52,11 +52,22 @@
             dogWhite: 0xFFFFFF,
             dogShadow: 0xCCCCCC
         };
+        
+        // Water Animation Constants
+        const WATER_FLOW_SPEED = 0.5; // Z units per second (group translation for flow)
+        const WAVE_SPEED = 3.0;       // How fast the wave oscillates
+        const WAVE_HEIGHT = 0.3;      // Max height of the wave (vertical offset)
+        const WAVE_SCALE = 0.2;       // How dense the waves are across the surface (frequency)
+        
+        // Dog Constants (Static)
+        const DOG_BASE_X = 10;
+        const DOG_BASE_Z = 10;
+
 
         // --- SCENE SETUP ---
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(PALETTE.sky);
-        // UPDATED: Decreased fog by another 50% by increasing the 'far' distance from 260 to 520.
+        // Decreased fog by increasing the 'far' distance from 260 to 520.
         scene.fog = new THREE.Fog(PALETTE.sky, 40, 520);
 
         const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
@@ -72,6 +83,11 @@
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.target.set(0, 0, 0);
+
+        // Global variables for animation
+        let dogGroup; 
+        let waterGroup;
+        const waterMeshesData = []; // Stores meshes and original positions for wave animation
 
         // --- LIGHTING ---
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -91,18 +107,26 @@
         scene.add(sunLight);
 
         // --- VOXEL ENGINE ---
-        const geometries = [];
-        const matrix = new THREE.Matrix4();
         const boxGeo = new THREE.BoxGeometry(VOXEL_SIZE, VOXEL_SIZE, VOXEL_SIZE);
 
-        // Group voxels by color
-        const voxelsByColor = {};
+        // Group voxels by color for the static scene
+        const staticVoxelsByColor = {};
+        const waterVoxelsByColor = {}; 
 
-        function addVoxel(x, y, z, colorHex) {
-            if (!voxelsByColor[colorHex]) {
-                voxelsByColor[colorHex] = [];
+        /**
+         * Adds a single voxel to the appropriate color group.
+         * @param {number} x - X coordinate.
+         * @param {number} y - Y coordinate.
+         * @param {number} z - Z coordinate.
+         * @param {number} colorHex - Hex color of the voxel.
+         * @param {boolean} isWater - If true, adds to the animated water group.
+         */
+        function addVoxel(x, y, z, colorHex, isWater = false) {
+            const target = isWater ? waterVoxelsByColor : staticVoxelsByColor;
+            if (!target[colorHex]) {
+                target[colorHex] = [];
             }
-            voxelsByColor[colorHex].push({ x, y, z });
+            target[colorHex].push({ x, y, z });
         }
 
         // --- SCENE BUILDER FUNCTIONS ---
@@ -121,7 +145,8 @@
                     // Water on the right side
                     if (x > 10 + Math.sin(z * 0.2) * 5) {
                          // Water level
-                        addVoxel(x, -3, z, Math.random() > 0.5 ? PALETTE.water : PALETTE.waterDeep);
+                        // Added true to the addVoxel call to put these in the water group
+                        addVoxel(x, -3, z, Math.random() > 0.5 ? PALETTE.water : PALETTE.waterDeep, true);
                         // Add seabed below
                         if (y < -3) addVoxel(x, y, z, PALETTE.sandDark);
                     } else {
@@ -297,24 +322,33 @@
         }
 
         /**
-         * Builds a small puppy model at world coordinates (x, z), rotated by 'rotation'.
+         * Builds a small puppy model using coordinates relative to the model's center (0, 0, 0).
+         * @returns {object} Dog's voxel data grouped by color.
          */
-        function buildPuppy(x, z, rotation) {
+        function buildPuppy(rotation) {
             const y = -1; // Puppy sits closer to ground
+            const dogVoxels = {}; // Local grouping by color for InstancedMesh later
 
-            // Helper to rotate points around the puppy center (x,z)
+            // Helper to rotate points around the puppy center (0,0)
             const rotY = (lx, lz) => {
                 const cos = Math.cos(rotation);
                 const sin = Math.sin(rotation);
                 return {
-                    x: Math.round(x + lx * cos - lz * sin),
-                    z: Math.round(z + lx * sin + lz + cos)
+                    // Standard Y-axis rotation logic
+                    x: Math.round(lx * cos - lz * sin),
+                    z: Math.round(lx * sin + lz * cos)
                 };
             };
 
+            // Wrapper to place a rotated voxel relative to the group origin (0,0,0)
             const placeRotated = (lx, ly, lz, c) => {
                 const p = rotY(lx, lz);
-                addVoxel(p.x, y + ly, p.z, c);
+                const colorHex = c;
+                if (!dogVoxels[colorHex]) {
+                    dogVoxels[colorHex] = [];
+                }
+                // Positions are relative to the group origin (0, 0, 0)
+                dogVoxels[colorHex].push({ x: p.x, y: y + ly, z: p.z });
             };
 
             // --- PUPPY MODEL (Length along X-axis, now rotated) ---
@@ -324,7 +358,6 @@
                 placeRotated(bx, 1, 0, PALETTE.dogWhite);
                 placeRotated(bx, 2, 0, PALETTE.dogWhite);
             }
-
 
             // Head (X=2)
             placeRotated(2, 3, 0, PALETTE.dogWhite); 
@@ -339,15 +372,68 @@
             placeRotated(1, 0, -1, PALETTE.dogWhite);
             placeRotated(-1, 0, 1, PALETTE.dogWhite);
             placeRotated(1, 0, 1, PALETTE.dogWhite);
+            
+            return dogVoxels;
+        }
+
+        /**
+         * Creates an InstancedMesh Group from a structured voxel data object.
+         * For water voxels, it also populates the global waterMeshesData array for wave animation.
+         * @param {object} voxelData - Object where keys are color hexes and values are arrays of {x, y, z} positions.
+         * @param {boolean} isWaterGroup - Flag to indicate if this is the water group.
+         * @returns {THREE.Group} A group containing InstancedMeshes, one per color.
+         */
+        function createInstancedMeshGroup(voxelData, isWaterGroup = false) {
+            const group = new THREE.Group();
+
+            Object.entries(voxelData).forEach(([colorStr, positions]) => {
+                if (positions.length === 0) return;
+                
+                const color = parseInt(colorStr);
+                const geometry = boxGeo;
+                
+                const isWater = isWaterGroup && (color === PALETTE.water || color === PALETTE.waterDeep);
+
+                const material = new THREE.MeshStandardMaterial({ 
+                    color: color, 
+                    roughness: 0.8,
+                    // Apply transparency for water
+                    transparent: isWater,
+                    opacity: isWater ? 0.9 : 1.0 
+                });
+                const mesh = new THREE.InstancedMesh(geometry, material, positions.length);
+
+                const dummy = new THREE.Object3D();
+
+                // If this is the water group, store its data for animation
+                if (isWater) {
+                    waterMeshesData.push({
+                        mesh: mesh,
+                        // Store copies of the original positions for calculating the wave offset
+                        originalPositions: positions.map(p => ({ x: p.x, y: p.y, z: p.z })),
+                        dummy: new THREE.Object3D() // Separate dummy object for matrix updates
+                    });
+                }
+
+                positions.forEach((pos, i) => {
+                    // Set the initial position matrix
+                    dummy.position.set(pos.x, pos.y, pos.z);
+                    dummy.updateMatrix();
+                    mesh.setMatrixAt(i, dummy.matrix);
+                });
+
+                mesh.instanceMatrix.needsUpdate = true;
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                group.add(mesh);
+            });
+            return group;
         }
 
         // --- GENERATE SCENE CONTENT ---
         
         buildGround();
         
-        // The rotation angle: The horse model faces +X initially.
-        // We need them to face the camera which is towards the -Z axis.
-        // Rotation is set to Math.PI * 0.5 (90 degrees)
         const horseAndDogRotation = Math.PI * 0.5; 
 
         const frontZ = 8; 
@@ -370,8 +456,11 @@
         // Walker on the path
         buildWalker(-12, 15);
 
-        // Puppy!
-        buildPuppy(10, 10, horseAndDogRotation); 
+        // Puppy Group Creation (Static)
+        const dogVoxelData = buildPuppy(horseAndDogRotation); 
+        dogGroup = createInstancedMeshGroup(dogVoxelData, false); 
+        dogGroup.position.set(DOG_BASE_X, 0, DOG_BASE_Z); 
+        scene.add(dogGroup);
 
         // Fort on the right background
         buildFort(20, -20);
@@ -381,34 +470,58 @@
 
 
         // --- RENDERING VOXELS ---
-        // Convert the data structure into InstancedMesh for efficient rendering
-        const voxelGroup = new THREE.Group();
-        
-        Object.entries(voxelsByColor).forEach(([colorStr, positions]) => {
-            const color = parseInt(colorStr);
-            const geometry = boxGeo;
-            const material = new THREE.MeshStandardMaterial({ color: color, roughness: 0.8 });
-            const mesh = new THREE.InstancedMesh(geometry, material, positions.length);
-            
-            const dummy = new THREE.Object3D();
-            
-            positions.forEach((pos, i) => {
-                dummy.position.set(pos.x, pos.y, pos.z);
-                dummy.updateMatrix();
-                mesh.setMatrixAt(i, dummy.matrix);
-            });
-            
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
-            voxelGroup.add(mesh);
-        });
+        // Convert the static parts and water parts into separate InstancedMesh groups
+        const voxelGroup = createInstancedMeshGroup(staticVoxelsByColor, false); // Static parts
+        waterGroup = createInstancedMeshGroup(waterVoxelsByColor, true); // Animated water parts
 
         scene.add(voxelGroup);
+        scene.add(waterGroup); 
         document.getElementById('loading').style.display = 'none';
 
         // --- ANIMATION LOOP ---
         function animate() {
             requestAnimationFrame(animate);
+
+            const time = performance.now() * 0.001;
+
+            // 1. WATER FLOW (Group Translation)
+            // Shifts the entire water plane along Z for the flowing illusion
+            if (waterGroup) {
+                waterGroup.position.z = (time * WATER_FLOW_SPEED) % VOXEL_SIZE;
+            }
+
+            // 2. WATER WAVES (InstancedMesh Matrix Update)
+            // Iterates through every water voxel to apply vertical wave motion
+            for (const meshData of waterMeshesData) {
+                const mesh = meshData.mesh;
+                const dummy = meshData.dummy;
+                const originalPositions = meshData.originalPositions;
+
+                for (let i = 0; i < originalPositions.length; i++) {
+                    const pos = originalPositions[i];
+                    
+                    // Calculate wave offset based on X/Z coordinates and time
+                    const waveY = Math.sin(
+                        pos.x * WAVE_SCALE + 
+                        pos.z * WAVE_SCALE * 0.5 + // Adjust Z scale slightly differently for variety
+                        time * WAVE_SPEED
+                    ) * WAVE_HEIGHT;
+
+                    // Set the voxel's relative position within the group
+                    // X and Z are original; Y is original + wave offset
+                    dummy.position.set(
+                        pos.x, 
+                        pos.y + waveY, 
+                        pos.z
+                    );
+
+                    dummy.updateMatrix();
+                    mesh.setMatrixAt(i, dummy.matrix);
+                }
+                // Tell Three.js the matrices have been updated
+                mesh.instanceMatrix.needsUpdate = true;
+            }
+
             controls.update();
             renderer.render(scene, camera);
         }

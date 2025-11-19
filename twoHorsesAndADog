@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coastal Riders Voxel Scene</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #87CEEB; }
+        canvas { display: block; }
+        #loading {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: white; font-family: sans-serif; font-weight: bold; pointer-events: none;
+        }
+    </style>
+    
+
+<script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="loading">Generating Voxels...</div>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- CONFIGURATION ---
+        const VOXEL_SIZE = 1;
+        const PALETTE = {
+            sand: 0xE6C288,
+            sandDark: 0xD4AF75,
+            water: 0x4B9CD3,
+            waterDeep: 0x3A80B0,
+            grass: 0x556B2F,
+            treeDark: 0x2F4F4F,
+            treeLight: 0x3E6B3E,
+            horseBrown: 0x8B4513,
+            horseWhite: 0xF0F0F0,
+            mane: 0x333333,
+            clothesBlue: 0x284568,
+            clothesRed: 0x8B0000,
+            clothesBeige: 0xD2B48C,
+            skin: 0xFFC0CB,
+            stone: 0xA9A9A9,
+            stoneDark: 0x808080,
+            sky: 0x87CEEB,
+            dogWhite: 0xFFFFFF,
+            dogShadow: 0xCCCCCC
+        };
+
+        // --- SCENE SETUP ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(PALETTE.sky);
+        scene.fog = new THREE.Fog(PALETTE.sky, 40, 120);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
+        camera.position.set(-40, 35, 60); // Angle to match painting composition approximately
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.target.set(0, 0, 0);
+
+        // --- LIGHTING ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        sunLight.position.set(-50, 100, 50);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        sunLight.shadow.camera.near = 0.5;
+        sunLight.shadow.camera.far = 500;
+        sunLight.shadow.camera.left = -100;
+        sunLight.shadow.camera.right = 100;
+        sunLight.shadow.camera.top = 100;
+        sunLight.shadow.camera.bottom = -100;
+        scene.add(sunLight);
+
+        // --- VOXEL ENGINE ---
+        const geometries = [];
+        const matrix = new THREE.Matrix4();
+        const boxGeo = new THREE.BoxGeometry(VOXEL_SIZE, VOXEL_SIZE, VOXEL_SIZE);
+
+        // Group voxels by color
+        const voxelsByColor = {};
+
+        function addVoxel(x, y, z, colorHex) {
+            if (!voxelsByColor[colorHex]) {
+                voxelsByColor[colorHex] = [];
+            }
+            voxelsByColor[colorHex].push({ x, y, z });
+        }
+
+        // --- SCENE BUILDER FUNCTIONS ---
+
+        function buildGround() {
+            // Ground Size
+            const width = 80;
+            const depth = 60;
+
+            for (let x = -width/2; x < width/2; x++) {
+                for (let z = -depth/2; z < depth/2; z++) {
+                    // Perlin-ish noise logic for terrain variation (simplified)
+                    const noise = Math.sin(x * 0.1) + Math.cos(z * 0.1);
+                    let y = Math.floor(noise * 1.5) - 2;
+
+                    // Water on the right side
+                    if (x > 10 + Math.sin(z * 0.2) * 5) {
+                         // Water level
+                        addVoxel(x, -3, z, Math.random() > 0.5 ? PALETTE.water : PALETTE.waterDeep);
+                        // Add seabed below
+                        if (y < -3) addVoxel(x, y, z, PALETTE.sandDark);
+                    } else {
+                        // Sand/Land
+                        let color = PALETTE.sand;
+                        if (Math.random() > 0.8) color = PALETTE.sandDark;
+                        
+                        // Patches of grass/scrub
+                        if (x < -10 && Math.random() > 0.7) color = PALETTE.grass;
+
+                        addVoxel(x, y, z, color);
+                        // Fill underneath to prevent floating
+                        addVoxel(x, y-1, z, PALETTE.sandDark);
+                    }
+                }
+            }
+        }
+
+        function buildCypressTree(x, z) {
+            const height = 12 + Math.floor(Math.random() * 6);
+            const yBase = 0; // approximate ground height
+
+            // Trunk
+            for(let i=0; i<3; i++) {
+                addVoxel(x, yBase+i, z, PALETTE.horseBrown);
+            }
+
+            // Leaves (Conical shape)
+            let radius = 2;
+            for(let y = 2; y < height; y++) {
+                if (y > height * 0.7) radius = 1;
+                if (y > height * 0.9) radius = 0; // tip
+
+                for(let lx = -radius; lx <= radius; lx++) {
+                    for(let lz = -radius; lz <= radius; lz++) {
+                        // Round off corners
+                        if (Math.abs(lx) + Math.abs(lz) <= radius + 0.5) {
+                            addVoxel(x+lx, yBase+y, z+lz, Math.random() > 0.5 ? PALETTE.treeDark : PALETTE.treeLight);
+                        }
+                    }
+                }
+            }
+        }
+
+        /**
+         * Builds a horse and rider model at world coordinates (x, z), rotated by 'rotation'.
+         * The rotation applies the full body.
+         */
+        function buildHorse(x, z, rotation, color, riderType) {
+            const y = 1; // Ground offset
+            
+            // Helper function to calculate the position of a voxel relative to the horse's origin (x, z) 
+            // after rotation around the Y-axis.
+            const rotY = (lx, lz) => {
+                const cos = Math.cos(rotation);
+                const sin = Math.sin(rotation);
+                return {
+                    x: Math.round(x + lx * cos - lz * sin),
+                    z: Math.round(z + lx * sin + lz * cos)
+                };
+            };
+
+            // Wrapper to place a rotated voxel
+            const placeRotated = (lx, ly, lz, c) => {
+                const p = rotY(lx, lz);
+                addVoxel(p.x, y + ly, p.z, c);
+            };
+
+            // --- HORSE MODEL (Origin centered on body, length along X-axis, now rotated) ---
+            
+            // Legs (Modeled on X, Z plane: [-2, -1], [2, -1], [-2, 1], [2, 1])
+            [[-2, -1], [2, -1], [-2, 1], [2, 1]].forEach(coord => {
+                for(let i=0; i<4; i++) placeRotated(coord[0], i, coord[1], color);
+            });
+
+            // Body (Extends from X=-3 to 3, Z=-1 to 1)
+            for(let bx=-3; bx<=3; bx++) {
+                for(let by=4; by<=6; by++) {
+                    for(let bz=-1; bz<=1; bz++) {
+                        placeRotated(bx, by, bz, color);
+                    }
+                }
+            }
+
+            // Neck (Extends towards +X)
+            for(let nx=2; nx<=4; nx++) {
+                for(let ny=6; ny<=9; ny++) {
+                    placeRotated(nx, ny, 0, color);
+                }
+            }
+            
+            // Head (Positioned around X=5)
+            placeRotated(5, 10, 0, color); 
+            placeRotated(6, 10, 0, color); // Snout
+            placeRotated(6, 10, 0, 0x222222); // Nose detail
+            
+            // Mane/Tail (Along the spine/rear, X=-4, X=4)
+            for(let my=7; my<=9; my++) placeRotated(4, my, 0, PALETTE.mane); // Mane
+            placeRotated(-4, 6, 0, PALETTE.mane); // Tail start
+            placeRotated(-5, 5, 0, PALETTE.mane);
+            placeRotated(-6, 4, 0, PALETTE.mane);
+            
+            // --- RIDER ---
+            const riderLegColor = PALETTE.clothesBeige;
+            const riderCoatColor = riderType === 'A' ? PALETTE.clothesBlue : PALETTE.clothesRed;
+            
+            // Rider Legs (straddling X=-1 to 1)
+            for(let ly=5; ly<=6; ly++) {
+                placeRotated(-1, ly, 0, riderLegColor);
+                placeRotated(1, ly, 0, riderLegColor);
+            }
+
+            // Rider Torso (Centered at X=0)
+            for(let ry=7; ry<=9; ry++) {
+                for(let rz=-1; rz<=1; rz++) { 
+                     placeRotated(0, ry, rz, riderCoatColor);
+                }
+            }
+            
+            // Rider Head
+            placeRotated(0, 10, 0, PALETTE.skin);
+            
+            // Hat
+            placeRotated(0, 11, 0, 0x111111);
+            placeRotated(1, 11, 0, 0x111111); // brim
+            placeRotated(-1, 11, 0, 0x111111);
+        }
+
+        function buildWalker(x, z) {
+            const y = 0;
+            // Legs
+            addVoxel(x, y, z, PALETTE.clothesBeige);
+            addVoxel(x, y+1, z, PALETTE.clothesBeige);
+            addVoxel(x, y+2, z, PALETTE.clothesBeige);
+            
+            // Torso
+            addVoxel(x, y+3, z, 0x223344); // Dark jacket
+            addVoxel(x, y+4, z, 0x223344);
+
+            // Head
+            addVoxel(x, y+5, z, PALETTE.skin);
+            addVoxel(x, y+6, z, 0x222222); // Hat
+
+            // Basket (approximated)
+            addVoxel(x+1, y+3, z, PALETTE.sandDark);
+        }
+
+        function buildFort(x, z) {
+            // Simple wall structure
+            for(let dx=0; dx<15; dx++) {
+                for(let dy=0; dy<8; dy++) {
+                     // Rampart shape
+                    if (dy < 6 || dx % 2 === 0) {
+                        addVoxel(x+dx, dy-2, z, PALETTE.stone);
+                        addVoxel(x+dx, dy-2, z+1, PALETTE.stoneDark); // depth
+                    }
+                }
+            }
+        }
+
+        function buildBackgroundMountains() {
+            for(let x=-50; x<50; x+=2) {
+                // Far Z
+                const z = -40; 
+                // Height based on sine waves to simulate mountain range
+                const height = 15 + Math.sin(x * 0.05) * 10 + Math.sin(x * 0.15) * 5;
+                
+                for(let y=-2; y<height; y+=2) {
+                     // We simulate "voxels" by placing blocks, but just a wall of them
+                    addVoxel(x, y, z - Math.random()*2, 0x887799); // Purpleish mountain color
+                }
+            }
+        }
+
+        /**
+         * Builds a small puppy model at world coordinates (x, z), rotated by 'rotation'.
+         */
+        function buildPuppy(x, z, rotation) {
+            const y = -1; // Puppy sits closer to ground
+
+            // Helper to rotate points around the puppy center (x,z)
+            const rotY = (lx, lz) => {
+                const cos = Math.cos(rotation);
+                const sin = Math.sin(rotation);
+                return {
+                    x: Math.round(x + lx * cos - lz * sin),
+                    z: Math.round(z + lx * sin + lz * cos)
+                };
+            };
+
+            const placeRotated = (lx, ly, lz, c) => {
+                const p = rotY(lx, lz);
+                addVoxel(p.x, y + ly, p.z, c);
+            };
+
+            // --- PUPPY MODEL (Length along X-axis, now rotated) ---
+
+            // Body (X=-1 to 1, Z=0)
+            for(let bx=-1; bx<=1; bx++) {
+                placeRotated(bx, 1, 0, PALETTE.dogWhite);
+                placeRotated(bx, 2, 0, PALETTE.dogWhite);
+            }
+
+
+            // Head (X=2)
+            placeRotated(2, 3, 0, PALETTE.dogWhite); 
+            placeRotated(3, 3, 0, PALETTE.dogWhite); // Snout
+
+            // Ears (X=1, Z=-1 and 1)
+            placeRotated(1, 4, -1, PALETTE.dogShadow);
+            placeRotated(1, 4, 1, PALETTE.dogShadow);
+
+            // Legs (X=-1 and 1, Z=-1 and 1)
+            placeRotated(-1, 0, -1, PALETTE.dogWhite);
+            placeRotated(1, 0, -1, PALETTE.dogWhite);
+            placeRotated(-1, 0, 1, PALETTE.dogWhite);
+            placeRotated(1, 0, 1, PALETTE.dogWhite);
+        }
+
+        // --- GENERATE SCENE CONTENT ---
+        
+        buildGround();
+        
+        // The rotation angle: The horse model faces +X initially.
+        // We need them to face the camera which is towards the -Z axis.
+        // Previous value: Math.PI * 0.5 + Math.PI (270 degrees) was facing away (+Z).
+        // To rotate 180 degrees, we change it to Math.PI * 0.5 (90 degrees) to face the camera (-Z).
+        const horseAndDogRotation = Math.PI * 0.5; // Rotated 180 degrees from the previous position to face the camera (-Z direction)
+
+        const frontZ = 8; 
+        const brownHorseX = -2; 
+        const whiteHorseX = 5; 
+        const whiteHorseZOffset = -6; 
+
+        // Brown Horse (Left, closer to front)
+        buildHorse(brownHorseX, frontZ, horseAndDogRotation, PALETTE.horseBrown, 'A'); 
+        
+        // White Horse (Right, further back)
+        buildHorse(whiteHorseX, frontZ + whiteHorseZOffset, horseAndDogRotation, PALETTE.horseWhite, 'B');
+
+        // Trees on the Left
+        buildCypressTree(-25, -5);
+        buildCypressTree(-28, 5);
+        buildCypressTree(-30, -15);
+        buildCypressTree(-22, -20);
+
+        // Walker on the path
+        buildWalker(-12, 15);
+
+        // Puppy!
+        buildPuppy(10, 10, horseAndDogRotation); 
+
+        // Fort on the right background
+        buildFort(20, -20);
+        
+        // Mountains
+        buildBackgroundMountains();
+
+
+        // --- RENDERING VOXELS ---
+        // Convert the data structure into InstancedMesh for efficient rendering
+        const voxelGroup = new THREE.Group();
+        
+        Object.entries(voxelsByColor).forEach(([colorStr, positions]) => {
+            const color = parseInt(colorStr);
+            const geometry = boxGeo;
+            const material = new THREE.MeshStandardMaterial({ color: color, roughness: 0.8 });
+            const mesh = new THREE.InstancedMesh(geometry, material, positions.length);
+            
+            const dummy = new THREE.Object3D();
+            
+            positions.forEach((pos, i) => {
+                dummy.position.set(pos.x, pos.y, pos.z);
+                dummy.updateMatrix();
+                mesh.setMatrixAt(i, dummy.matrix);
+            });
+            
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            voxelGroup.add(mesh);
+        });
+
+        scene.add(voxelGroup);
+        document.getElementById('loading').style.display = 'none';
+
+        // --- ANIMATION LOOP ---
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Resize handler
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+
+    </script>
+</body>
+</html>

@@ -91,6 +91,17 @@
             font-size: clamp(1rem, 4vw, 2rem);
             line-height: 1.4;
         }
+        
+        /* FIX: Ensure main app header is readable on small screens */
+        @media (max-width: 639px) { 
+            .app-header h1 {
+                font-family: var(--font-sans); /* Switch to Inter */
+                text-shadow: none; /* Remove chunky pixel shadow */
+                font-weight: 900; /* Make it extra bold */
+                letter-spacing: 0.05em; 
+                font-size: 1.5rem; /* Ensure a minimum readable size */
+            }
+        }
 
         /* Voxel Button Styling */
         .voxel-btn {
@@ -137,7 +148,7 @@
 
         /* Headings within content - IMPROVED READABILITY */
         h2.content-heading {
-            /* CHANGED: Switched to readable sans-serif font for the subtitle */
+            /* Switched to readable sans-serif font for the subtitle */
             font-family: var(--font-sans); 
             font-weight: 800; /* Added weight for prominence */
             color: var(--primary-color);
@@ -150,7 +161,7 @@
             letter-spacing: 0.1em; /* Added subtle letter spacing for readability */
         }
         
-        /* New style for the H3 inside the card - PAINTINGS DISCOVERED */
+        /* New style for the H3 inside the detail card - PAINTINGS DISCOVERED */
         .card-subheading {
             font-family: var(--font-pixel);
             color: black; /* Ensuring black for contrast */
@@ -273,7 +284,8 @@
                                  class="w-full h-40 object-cover block">
                         </div>
                         <div class="w-full">
-                            <h3 class="pixel-text !text-primary-color !text-shadow-none text-sm sm:text-base mb-2 leading-tight">${gallery.name.toUpperCase()}</h3>
+                            <!-- Title already uses font-sans for readability -->
+                            <h3 class="font-sans font-extrabold !text-primary-color !text-shadow-none text-sm sm:text-base mb-2 leading-tight">${gallery.name.toUpperCase()}</h3>
                             <p class="text-xs font-sans text-gray-600 mb-4 border-l-4 border-gray-300 pl-2">${gallery.subtitle}</p>
                             <button class="voxel-btn w-full bg-yellow-400 text-black py-2 text-xs hover:bg-yellow-300">
                                 ENTER GALLERY

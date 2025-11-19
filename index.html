@@ -175,11 +175,13 @@
     </style>
 
     <!-- 
-        PWA Manifest - Embedded using a Data URL.
+        PWA Manifest - Now linked externally for better PWA support.
     -->
-    <link rel="manifest" href="data:application/json;base64,
-        eyJhbGciOiJSUzI1NiIsImtpZCI6IjRiMzQ3YzUyZGI2YjkwODMyNjcwY2M5YTBlMGUzMzlmMGU3MDBkNjQifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhdWQiOiJodHRwczovL2dlbmVyYXRpdmVsYW5ndWFnZS5nb29nbGVhcGlzLmNvbS92MWJldGEvbW9kZWxzL2dlbWluaS0yLjUtZmxhc2gtcHJldmlldy0wOS0yMDI1OmdlbmVyYXRlQ29udGVudCIsImlhdCI6MTYzODQyNDgwMCwiZXhwIjoxNjM4NDI4NDAwLCJzdWIiOiIxMTQzMjUyMzAwMDAwMDAwMDAwMCIsInByb21wdCI6IldyaXRlIGFuIGVzc2F5IG9uIHRoZSBzdGFnZXMgb2YgbWl0b3NpcyIsImVzc2F5VHlwZSI6IjUwMC13b3JkIGVzc2F5IiwiZXNzYXlQcm9tcHQiOiJzdGFnZXMgb2YgbWl0b3NpcyJ9
-    ">
+    <link rel="manifest" href="manifest.json">
+    <!-- Apple Touch Icon for iOS/Safari PWA support -->
+    <link rel="apple-touch-icon" href="icon-192x192.png">
+    <!-- Theme color for browser UI. Matches theme_color in manifest.json -->
+    <meta name="theme-color" content="#4a90e2">
 
 </head>
 <body>
@@ -339,8 +341,6 @@
 
             html += `
                     </ul>
-                    <!-- Removed the system notice block below as requested -->
-                    
                 </div>
             `;
             contentContainer.innerHTML = html;

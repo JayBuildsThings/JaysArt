@@ -178,7 +178,7 @@
         PWA Manifest - Embedded using a Data URL.
     -->
     <link rel="manifest" href="data:application/json;base64,
-        eyJhbGciOiJSUzI1NiIsImtpZCI6IjRiMzQ3YzUyZGI2YjkwODMyNjcwY2M5YTBlMGUzMjlmMGU3MDBkNjQifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhdWQiOiJodHRwczovL2dlbmVyYXRpdmVsYW5ndWFnZS5nb29nbGVhcGlzLmNvbS92MWJldGEvbW9kZWxzL2dlbWluaS0yLjUtZmxhc2gtcHJldmlldy0wOS0yMDI1OmdlbmVyYXRlQ29udGVudCIsImlhdCI6MTYzODQyNDgwMCwiZXhwIjoxNjM4NDI4NDAwLCJzdWIiOiIxMTQzMjUyMzAwMDAwMDAwMDAwMCIsInByb21wdCI6IldyaXRlIGFuIGVzc2F5IG9uIHRoZSBzdGFnZXMgb2YgbWl0b3NpcyIsImVzc2F5VHlwZSI6IjUwMC13b3JkIGVzc2F5IiwiZXNzYXlQcm9tcHQiOiJzdGFnZXMgb2YgbWl0b3NpcyJ9
+        eyJhbGciOiJSUzI1NiIsImtpZCI6IjRiMzQ3YzUyZGI2YjkwODMyNjcwY2M5YTBlMGUzMzlmMGU3MDBkNjQifQ.eyJpc3MiOiJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20iLCJhdWQiOiJodHRwczovL2dlbmVyYXRpdmVsYW5ndWFnZS5nb29nbGVhcGlzLmNvbS92MWJldGEvbW9kZWxzL2dlbWluaS0yLjUtZmxhc2gtcHJldmlldy0wOS0yMDI1OmdlbmVyYXRlQ29udGVudCIsImlhdCI6MTYzODQyNDgwMCwiZXhwIjoxNjM4NDI4NDAwLCJzdWIiOiIxMTQzMjUyMzAwMDAwMDAwMDAwMCIsInByb21wdCI6IldyaXRlIGFuIGVzc2F5IG9uIHRoZSBzdGFnZXMgb2YgbWl0b3NpcyIsImVzc2F5VHlwZSI6IjUwMC13b3JkIGVzc2F5IiwiZXNzYXlQcm9tcHQiOiJzdGFnZXMgb2YgbWl0b3NpcyJ9
     ">
 
 </head>
@@ -240,8 +240,10 @@
                     paintings: [
                         // MODIFIED: externalUrl updated to TwoHorsesAndADog.html
                         { id: 'bal_du_moulin', title: 'Two Horses and a Dog', externalUrl: 'TwoHorsesAndADog.html' },
-                        { id: 'starry_night', title: 'The Starry Night (Van Gogh, Placeholder Example)', externalUrl: 'starry_night_voxel.html' },
-                        { id: 'whistler_mother', title: 'Arrangement in Grey and Black No. 1 (Whistler)', externalUrl: 'whistler_mother_voxel.html' }
+                        // RENAMED the painting below to "Old Lady Sitting"
+                        // UPDATED: externalUrl to match the new file name.
+                        { id: 'starry_night', title: 'Old Lady Sitting', externalUrl: 'OldLadySitting.html' }
+                        // REMOVED: { id: 'whistler_mother', title: 'Arrangement in Grey and Black No. 1 (Whistler)', externalUrl: 'whistler_mother_voxel.html' }
                     ]
                 }
                 // Future galleries will be added here
@@ -337,10 +339,8 @@
 
             html += `
                     </ul>
-                    <div class="mt-8 bg-yellow-50 border-2 border-yellow-200 p-4 text-xs text-gray-600 font-sans">
-                        <strong>SYSTEM NOTICE:</strong><br>
-                        LINKS OPEN EXTERNAL FILES (e.g., \`${gallery.paintings[0].externalUrl}\`). ENSURE THESE EXIST IN REPO.
-                    </div>
+                    <!-- Removed the system notice block below as requested -->
+                    
                 </div>
             `;
             contentContainer.innerHTML = html;

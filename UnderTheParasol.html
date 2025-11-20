@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pastoral Gathering Voxel Scene</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #AECBDB; font-family: 'Inter', sans-serif; }
+        canvas { display: block; }
+        #loading {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: #222; font-family: sans-serif; font-weight: bold; pointer-events: none;
+            padding: 1rem; border-radius: 0.5rem; background-color: rgba(255, 255, 255, 0.8);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+    
+
+<script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="loading">Generating Pastoral Scene Voxels...</div>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- CONFIGURATION ---
+        const VOXEL_SIZE = 1;
+        const PALETTE = {
+            sky: 0xAECBDB,       // Soft blue sky
+            grassLight: 0x77995A,  // Bright grass/field
+            grassDark: 0x54713A,   // Shadowed grass
+            rock: 0xA0A0A0,        // Stone wall color
+            rockDark: 0x777777,    // Deep shadow in rocks
+            parasolCanvas: 0xF7EEDD, // Beige/off-white canvas
+            parasolPole: 0xCCAA66, // Wood pole
+            dressBrown: 0x4B3735,  // Dark Victorian dress
+            shawl: 0x8B6F6E,       // Woman's shawl
+            apron: 0xEEEEEE,       // White apron
+            childWhite: 0xEFEFEF,  // White dress/shirt
+            childBlue: 0x284568,   // Dark blue children's clothes
+            skin: 0xFFDAB9,        // Pale skin tone
+            hairDark: 0x333333,
+            hatStraw: 0xD4B87C,    // Straw hat
+            hatDark: 0x1A1A1A,     // Dark cap
+            treeFoliage: 0x3E5939,
+            treeTrunk: 0x5C4033,
+        };
+
+        // --- SCENE SETUP ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(PALETTE.sky);
+        scene.fog = new THREE.Fog(PALETTE.sky, 60, 200);
+
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000);
+        // Position camera to look at the scene's center (0, 0, 0)
+        camera.position.set(-40, 30, 45); 
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.target.set(10, 5, 0); // Focus slightly on the main gathering area
+        controls.maxPolarAngle = Math.PI / 2.1; // Prevent going under the ground
+
+        // --- LIGHTING ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
+        // Light coming from top-left, casting long shadows to the right
+        sunLight.position.set(-30, 60, 40); 
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        sunLight.shadow.camera.near = 0.5;
+        sunLight.shadow.camera.far = 200;
+        sunLight.shadow.camera.left = -50;
+        sunLight.shadow.camera.right = 50;
+        sunLight.shadow.camera.top = 50;
+        sunLight.shadow.camera.bottom = -50;
+        scene.add(sunLight);
+
+        // --- VOXEL ENGINE ---
+        // Separate voxel storage for static elements and the dynamic parasol
+        const staticVoxelsByColor = {}; 
+        const dynamicVoxelsByColor = {}; 
+        let parasolMeshGroup; 
+        
+        const boxGeo = new THREE.BoxGeometry(VOXEL_SIZE, VOXEL_SIZE, VOXEL_SIZE);
+
+        /**
+         * Adds a single voxel to the scene data structure.
+         * @param {object} targetMap The map (staticVoxelsByColor or dynamicVoxelsByColor) to add the voxel to.
+         */
+        function addVoxel(x, y, z, colorHex, targetMap = staticVoxelsByColor) {
+            const colorStr = '0x' + colorHex.toString(16).padStart(6, '0');
+            if (!targetMap[colorStr]) {
+                targetMap[colorStr] = [];
+            }
+            targetMap[colorStr].push({ x, y, z });
+        }
+
+        // --- SCENE BUILDER FUNCTIONS ---
+
+        function buildGround() {
+            const width = 80;
+            const depth = 80;
+            const yOffset = -3; // Base ground level
+
+            for (let x = -width/2; x < width/2; x++) {
+                for (let z = -depth/2; z < depth/2; z++) {
+                    // Simple elevation based on distance from the center and a sine wave
+                    const distSq = x * x + z * z;
+                    const elevation = Math.sin(x * 0.1 + z * 0.05) * 1 + (x * 0.05); // Creates a subtle slope up towards the wall
+                    let y = Math.floor(yOffset + elevation);
+
+                    let color = PALETTE.grassLight;
+                    if (Math.random() > 0.8) color = PALETTE.grassDark;
+                    
+                    // Add base ground
+                    addVoxel(x, y, z, color);
+                    addVoxel(x, y - 1, z, PALETTE.grassDark);
+
+                    // Add small rocks and bumps
+                    if (Math.random() < 0.02) {
+                        addVoxel(x, y + 1, z, PALETTE.rockDark);
+                    }
+                }
+            }
+        }
+
+        function buildTreeLine() {
+            const zStart = -30;
+            const xRange = 40;
+            for(let x = -xRange; x < xRange; x += 3 + Math.random() * 5) {
+                const z = zStart - Math.sin(x * 0.1) * 3 + (Math.random() * 4 - 2);
+                buildCypressTree(x, z);
+            }
+        }
+
+        function buildCypressTree(x, z) {
+            const height = 15 + Math.floor(Math.random() * 5);
+            const yBase = -1; // Ground height is around -2 to -1
+
+            // Trunk
+            for(let i=0; i<3; i++) {
+                addVoxel(x, yBase+i, z, PALETTE.treeTrunk);
+            }
+
+            // Leaves (bushy, dense shape)
+            let radius = 4;
+            for(let y = 2; y < height; y++) {
+                let currentRadius = Math.max(1, radius - Math.floor(y / 4));
+
+                for(let lx = -currentRadius; lx <= currentRadius; lx++) {
+                    for(let lz = -currentRadius; lz <= currentRadius; lz++) {
+                        if (Math.random() > 0.3) {
+                            addVoxel(x+lx, yBase+y, z+lz, PALETTE.treeFoliage);
+                        }
+                    }
+                }
+            }
+        }
+
+
+        function buildStoneWall(startX, startZ) {
+            const wallLength = 30;
+            const wallHeight = 12;
+            
+            // Build the main vertical wall structure (mostly on the right side of the scene)
+            for(let z=0; z < wallLength; z++) {
+                let currentHeight = wallHeight + Math.floor(Math.sin(z * 0.5) * 2); // Vary height
+                let x = startX + Math.floor(Math.cos(z * 0.2) * 2); // Slight curvature
+
+                for(let y=-2; y < currentHeight; y++) {
+                    let color = Math.random() < 0.2 ? PALETTE.rockDark : PALETTE.rock;
+                    addVoxel(x, y, startZ + z, color);
+                    // Add thickness to the wall
+                    addVoxel(x+1, y, startZ + z, color); 
+                }
+            }
+        }
+
+        function buildParasol(x, y, z) {
+            const targetMap = dynamicVoxelsByColor; // Use the dynamic map for animation
+            const poleColor = PALETTE.parasolPole;
+            const canvasColor = PALETTE.parasolCanvas;
+
+            // Pole
+            for (let i = 0; i < 15; i++) {
+                addVoxel(x, y + i, z, poleColor, targetMap);
+            }
+
+            // Canvas (Dome Shape - approximated with voxels)
+            const radius = 6;
+            for (let dx = -radius; dx <= radius; dx++) {
+                for (let dz = -radius; dz <= radius; dz++) {
+                    const distSq = dx * dx + dz * dz;
+                    if (distSq < radius * radius) {
+                        // Top layer
+                        addVoxel(x + dx, y + 15, z + dz, canvasColor, targetMap);
+                        // Bottom layer
+                        if (distSq > (radius - 1.5) * (radius - 1.5)) {
+                             addVoxel(x + dx, y + 14, z + dz, canvasColor, targetMap);
+                        }
+                    }
+                }
+            }
+        }
+
+        /**
+         * Builds a basic humanoid figure.
+         * @param {number} x Base X coordinate.
+         * @param {number} y Base Y coordinate (ground level is ~-2).
+         * @param {number} z Base Z coordinate.
+         * @param {number} height Height in voxels.
+         * @param {number} rotation Y-axis rotation in radians.
+         * @param {object} colors Map of clothing/hair/hat colors.
+         * @param {array} pose Voxel offsets for arms/legs relative to torso.
+         */
+        function buildFigure(x, y, z, height, rotation, colors, pose) {
+            const yBase = y; // Voxel Y-coordinate for the feet on the ground
+            const figureOriginY = yBase + 2; // Torso starts here (after legs)
+
+            const rotY = (lx, lz) => {
+                const cos = Math.cos(rotation);
+                const sin = Math.sin(rotation);
+                return {
+                    x: Math.round(x + lx * cos - lz * sin),
+                    z: Math.round(z + lx * sin + lz * cos)
+                };
+            };
+
+            const placeRotated = (lx, ly, lz, c) => {
+                const p = rotY(lx, lz);
+                addVoxel(p.x, figureOriginY + ly, p.z, c);
+            };
+
+            // Torso (Main body block)
+            for(let ty=0; ty<4; ty++) {
+                placeRotated(0, ty, 0, colors.torso);
+            }
+
+            // Head (Positioned above torso)
+            placeRotated(0, 4, 0, PALETTE.skin);
+            
+            // Hat/Hair (Optional)
+            if (colors.hat) {
+                placeRotated(0, 5, 0, colors.hat);
+            }
+            if (colors.hair) {
+                placeRotated(0, 4, 1, colors.hair);
+                placeRotated(0, 4, -1, colors.hair);
+            }
+
+            // Pose (Arms/Legs - using pose array if provided)
+            if (pose) {
+                pose.forEach(p => {
+                    const color = p[3] || colors.torso;
+                    placeRotated(p[0], p[1], p[2], color);
+                });
+            } else {
+                // Default standing legs (down from torso start)
+                for(let ly=-2; ly<0; ly++) {
+                    placeRotated(0, ly, 0, colors.legs || colors.torso);
+                }
+                // Default arms (down from torso top)
+                for(let ay=0; ay<3; ay++) {
+                    placeRotated(1, ay, 0, colors.torso);
+                    placeRotated(-1, ay, 0, colors.torso);
+                }
+            }
+        }
+
+        // --- SCENE PLACEMENT ---
+        
+        buildGround();
+        buildTreeLine();
+        
+        // Stone Wall on the right side
+        buildStoneWall(20, -10);
+
+        // Center of the main gathering
+        const centerX = 8;
+        const centerZ = 8;
+
+        // Parasol - Now built using dynamicVoxelsByColor
+        buildParasol(centerX, -1, centerZ + 2);
+
+        // Figures - All built using staticVoxelsByColor (default)
+        // Figure 1: Woman with Child (Center-Left)
+        buildFigure(centerX - 5, -2, centerZ + 1, 6, -Math.PI * 0.1, {
+            torso: PALETTE.dressBrown,
+            hat: PALETTE.shawl,
+            hair: PALETTE.hairDark,
+            legs: PALETTE.dressBrown
+        }, [
+            // Legs (covered by long dress)
+            [0, -1, 0, PALETTE.dressBrown],
+            // Child in arms (simple block)
+            [1, 5, 0, PALETTE.childWhite],
+            [1, 6, 0, PALETTE.skin]
+        ]);
+
+        // Figure 2: Woman with Umbrella/Sketchpad (Center-Right)
+        buildFigure(centerX + 2, -2, centerZ - 1, 6, Math.PI * 0.2, {
+            torso: PALETTE.dressBrown,
+            hat: PALETTE.hatDark,
+            hair: PALETTE.hairDark,
+            legs: PALETTE.dressBrown
+        });
+
+        // Figure 3: Child in White Dress (Facing away)
+        buildFigure(centerX, -2, centerZ - 2, 4, 0, {
+            torso: PALETTE.childWhite,
+            hat: PALETTE.childWhite, // Head cover
+            legs: PALETTE.childWhite
+        });
+        
+        // Figure 4: Child Standing on Ground (Moved from wall)
+        buildFigure(20, -2, -5, 4, -Math.PI * 0.5, {
+            torso: PALETTE.childBlue,
+            hat: PALETTE.hatDark,
+            legs: PALETTE.childBlue
+        }); 
+        
+        // Figure 5: Child with Dark Cap (Sitting on a rock)
+        buildFigure(15, 0, 10, 3, Math.PI * 0.7, {
+            torso: PALETTE.childBlue,
+            hat: PALETTE.hatDark,
+            legs: PALETTE.childBlue
+        }, [
+            // Sitting pose on a rock
+            [0, -1, 0, PALETTE.childBlue],
+            [1, -1, 0, PALETTE.childBlue],
+            [-1, -1, 0, PALETTE.childBlue]
+        ]);
+        
+        // Figure 6: Child with Straw Hat (Lower front)
+        buildFigure(5, -2, 15, 3, 0, {
+            torso: PALETTE.childBlue,
+            hat: PALETTE.hatStraw,
+            legs: PALETTE.childBlue
+        }, [
+            // Crawling/kneeling pose
+            [1, 0, 0, PALETTE.childBlue], // Arms forward
+            [-1, 0, 0, PALETTE.childBlue],
+            [0, -1, 0, PALETTE.childBlue] // Legs down
+        ]);
+
+        // --- RENDERING VOXELS ---
+        /**
+         * Converts a voxel data map into a single InstancedMesh group.
+         */
+        function createInstancedVoxelGroup(voxelDataMap) {
+            const group = new THREE.Group();
+            Object.entries(voxelDataMap).forEach(([colorStr, positions]) => {
+                const color = parseInt(colorStr);
+                const material = new THREE.MeshStandardMaterial({ 
+                    color: color, 
+                    roughness: 0.8,
+                    metalness: 0.1 
+                });
+                const mesh = new THREE.InstancedMesh(boxGeo, material, positions.length);
+                const dummy = new THREE.Object3D();
+                
+                positions.forEach((pos, i) => {
+                    dummy.position.set(pos.x, pos.y, pos.z);
+                    dummy.updateMatrix();
+                    mesh.setMatrixAt(i, dummy.matrix);
+                });
+                
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                group.add(mesh);
+            });
+            return group;
+        }
+
+        // 1. Render Static Voxels (Ground, Figures, Wall, Trees)
+        const staticVoxelGroup = createInstancedVoxelGroup(staticVoxelsByColor);
+        scene.add(staticVoxelGroup);
+
+        // 2. Render Dynamic Voxels (Parasol)
+        parasolMeshGroup = createInstancedVoxelGroup(dynamicVoxelsByColor);
+        scene.add(parasolMeshGroup);
+        
+        document.getElementById('loading').style.display = 'none';
+
+        // --- ANIMATION LOOP ---
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+
+            // Apply subtle wind movement (rotation around the Y-axis) to the parasol group
+            if (parasolMeshGroup) {
+                // Uses a sine wave to create a smooth, oscillating movement
+                parasolMeshGroup.rotation.y = Math.sin(Date.now() * 0.0005) * 0.05; 
+            }
+            
+            renderer.render(scene, camera);
+        }
+
+        // Resize handler
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+
+    </script>
+</body>
+</html>

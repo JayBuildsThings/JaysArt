@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monet Voxel Garden (Corrected Sway)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #A0C4E4; }
+        canvas { display: block; }
+        #info {
+            position: absolute;
+            top: 0;
+            width: 100%;
+            text-align: center;
+            padding: 10px;
+            color: white;
+            font-family: 'Inter', sans-serif;
+            text-shadow: 1px 1px 2px #000;
+            pointer-events: none;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">Use your mouse/touch to orbit and watch the sunflowers sway!</div>
+    <script>
+        // --- Global Setup ---
+        let scene, camera, renderer, controls;
+        const voxelSize = 0.5;
+        const sunflowerGroups = []; 
+        
+        // --- Color Palette (Inspired by the painting) ---
+        const Colors = {
+            HazeSky: 0xD0D8E8, 
+            HouseWhite: 0xF0F0F0,
+            RoofOrange: 0xE58A63, 
+            WindowBlack: 0x1C1C1C,
+            SunflowerYellow: 0xFFD700,
+            SunflowerBrown: 0x8B4513,
+            FoliageDark: 0x1E4D2B, 
+            FoliageLight: 0x38761D, 
+            StoneGrey: 0xAAAAAA
+        };
+
+        // --- Core Functions ---
+
+        /**
+         * Creates a single voxel (cube) and adds it to the specified parent group/scene.
+         * The position (x,y,z) is relative to the parent's local coordinate system.
+         */
+        function createVoxel(x, y, z, color, size = 1, parent = scene) {
+            const geometry = new THREE.BoxGeometry(voxelSize * size, voxelSize * size, voxelSize * size);
+            const material = new THREE.MeshStandardMaterial({ color: color });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.set(x * voxelSize, y * voxelSize, z * voxelSize);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            parent.add(mesh);
+            return mesh;
+        }
+
+        /**
+         * Initializes the Three.js scene.
+         */
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(Colors.HazeSky);
+            scene.fog = new THREE.Fog(Colors.HazeSky, 20, 60);
+
+            // Camera (Adjusted for the larger buildings)
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.set(15, 12, 20); 
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
+            document.body.appendChild(renderer.domElement);
+
+            // Controls (Allows orbiting the scene)
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.target.set(0, 5, 0); 
+            controls.update();
+            
+            // Lighting
+            addLighting();
+
+            // Build the Voxel Scene
+            buildScene();
+
+            // Event Listeners
+            window.addEventListener('resize', onWindowResize, false);
+
+            // --- Hide the info box after 4 seconds ---
+            const infoBox = document.getElementById('info');
+            if (infoBox) {
+                // Use a transition for smooth fading
+                infoBox.style.transition = 'opacity 1s ease-in-out';
+                setTimeout(() => {
+                    infoBox.style.opacity = '0';
+                    // Completely remove it from the DOM after the transition is complete
+                    setTimeout(() => {
+                        infoBox.remove();
+                    }, 1000);
+                }, 4000); // 4 seconds delay
+            }
+            // ----------------------------------------
+
+            // Start Animation Loop
+            animate();
+        }
+
+        function addLighting() {
+            const ambientLight = new THREE.AmbientLight(0xFFFFFF, 0.5); 
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xFFFFFF, 1.2);
+            directionalLight.position.set(15, 25, 10); 
+            directionalLight.castShadow = true;
+
+            directionalLight.shadow.mapSize.width = 2048; 
+            directionalLight.shadow.mapSize.height = 2048;
+            directionalLight.shadow.camera.near = 0.5;
+            directionalLight.shadow.camera.far = 60;
+            directionalLight.shadow.camera.left = -30;
+            directionalLight.shadow.camera.right = 30;
+            directionalLight.shadow.camera.top = 30;
+            directionalLight.shadow.camera.bottom = -30;
+            
+            scene.add(directionalLight);
+        }
+
+        /**
+         * Builds the main house structure with dormer windows.
+         */
+        function buildHouse(baseX, baseZ) {
+            const scale = 1.5; 
+            const h = Math.round(8 * scale); 
+            const w = Math.round(12 * scale); 
+            const d = Math.round(8 * scale); 
+            const wallColor = Colors.HouseWhite;
+            const roofColor = Colors.RoofOrange;
+            const winColor = Colors.WindowBlack;
+
+            // 1. Main White Body (Walls)
+            for (let x = 0; x < w; x++) {
+                for (let y = 0; y < h; y++) {
+                    for (let z = 0; z < d; z++) {
+                        createVoxel(baseX + x, y, baseZ + z, wallColor);
+                    }
+                }
+            }
+
+            // 2. Main Windows (Ground Floor)
+            const winY = Math.round(3 * scale);
+            const winSize = Math.round(2 * scale);
+            createVoxel(baseX + Math.round(3 * scale), winY, baseZ, winColor, winSize); 
+            createVoxel(baseX + Math.round(9 * scale), winY, baseZ, winColor, winSize); 
+
+            // 3. Roof (Gable structure, overhanging by 1 voxel)
+            const roofH = Math.round(4 * scale); 
+            const roofW = w + 2;
+            const roofD = d + 2;
+
+            for (let x = -1; x < roofW - 1; x++) {
+                for (let z = -1; z < roofD - 1; z++) {
+                    for (let y = 0; y < roofH; y++) {
+                        const peakX = (roofW / 2) - 1;
+                        const distance = Math.abs(x - peakX);
+                        if (y <= roofH - 1 - Math.ceil(distance / 2)) {
+                             createVoxel(baseX + x, h + y, baseZ + z, roofColor);
+                        }
+                    }
+                }
+            }
+            
+            // 4. Dormer Windows (Three dormers on the front face)
+            const dormerY = h + Math.round(2 * scale); 
+            const dormerZ = baseZ - 1; 
+            const dormerPositions = [baseX + Math.round(3 * scale), baseX + Math.round(6 * scale), baseX + Math.round(9 * scale)];
+
+            for (const dx of dormerPositions) {
+                createVoxel(dx, dormerY + 1, dormerZ - 1, roofColor, 2); 
+                createVoxel(dx, dormerY, dormerZ - 1, wallColor, 2);
+                createVoxel(dx, dormerY, dormerZ - 2, winColor, 1);
+            }
+
+            // 5. Chimneys
+            const chimneyH = Math.round(4 * scale);
+            const chimneyBaseY = h + Math.round(1 * scale);
+            for (let y = 0; y < chimneyH; y++) {
+                createVoxel(baseX + 1, chimneyBaseY + y, baseZ + 1, wallColor);
+                createVoxel(baseX + w - 2, chimneyBaseY + y, baseZ + d - 2, wallColor);
+            }
+        }
+
+        /**
+         * Creates a single sunflower stalk as a THREE.Group for animation.
+         */
+        function buildSunflower(x, z, height = 8) {
+            const group = new THREE.Group();
+            scene.add(group);
+            
+            // Set the group's pivot point to the base of the stem at the given x,z and y=0
+            group.position.set(x * voxelSize, 0, z * voxelSize);
+            
+            // Custom properties for sway animation
+            group.swayOffset = Math.random() * Math.PI * 2; 
+            group.swayAmplitude = 0.1 + Math.random() * 0.05; 
+            group.swaySpeed = 0.001 + Math.random() * 0.0005; 
+
+            // Stem (Green)
+            // Voxels are now positioned relative to the group's origin (0,0,0)
+            for (let y = 0; y < height; y++) {
+                createVoxel(0, y, 0, Colors.FoliageLight, 0.5, group); 
+            }
+            
+            // Head (Yellow Petals)
+            // Positioned relative to the group's origin, at the top of the stem
+            const headY = height; 
+            
+            // Center (Brown)
+            createVoxel(0, headY, 0, Colors.SunflowerBrown, 0.8, group);
+
+            // Petals (Yellow)
+            createVoxel(1, headY, 0, Colors.SunflowerYellow, 0.5, group);
+            createVoxel(-1, headY, 0, Colors.SunflowerYellow, 0.5, group);
+            createVoxel(0, headY, 1, Colors.SunflowerYellow, 0.5, group);
+            createVoxel(0, headY, -1, Colors.SunflowerYellow, 0.5, group);
+            
+            createVoxel(0.7, headY, 0.7, Colors.SunflowerYellow, 0.5, group);
+            createVoxel(-0.7, headY, -0.7, Colors.SunflowerYellow, 0.5, group);
+            createVoxel(0.7, headY, -0.7, Colors.SunflowerYellow, 0.5, group);
+            createVoxel(-0.7, headY, 0.7, Colors.SunflowerYellow, 0.5, group);
+
+            sunflowerGroups.push(group);
+        }
+
+        /**
+         * Creates a dense field of foliage and scattered sunflowers.
+         */
+        function buildFoliageAndGarden() {
+            // Ground Plane
+            const groundGeometry = new THREE.PlaneGeometry(50, 50);
+            const groundMaterial = new THREE.MeshStandardMaterial({ color: Colors.FoliageDark, side: THREE.DoubleSide });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.position.y = -voxelSize * 0.5; 
+            ground.receiveShadow = true;
+            scene.add(ground);
+
+            const gardenDepth = 15;
+            const gardenWidth = 40;
+            const houseOffsetZ = -15;
+
+            // Dense Foliage Base (behind the main sunflowers)
+            for (let i = 0; i < 2500; i++) {
+                const x = (Math.random() * gardenWidth) - (gardenWidth / 2);
+                const z = (Math.random() * gardenDepth) + houseOffsetZ;
+                const y = (Math.random() * 6) + 0;
+                const color = Math.random() > 0.5 ? Colors.FoliageDark : Colors.FoliageLight;
+                const size = Math.random() * 2 + 0.8;
+                createVoxel(x, y, z, color, size);
+            }
+            
+            // Sunflower Field (closer to the camera/viewer)
+            const flowerCount = 40;
+            for (let i = 0; i < flowerCount; i++) {
+                const x = (Math.random() * 25) - 12.5;
+                const z = (Math.random() * 10) + 4; 
+                const height = Math.floor(Math.random() * 7) + 6; 
+                buildSunflower(x, z, height); 
+            }
+
+            // Create some large bushes around the main house
+            for (let i = 0; i < 700; i++) {
+                const x = (Math.random() * 20) - 10;
+                const z = (Math.random() * 10) - 18;
+                const y = (Math.random() * 7) + 0;
+                const color = Math.random() > 0.5 ? Colors.FoliageDark : Colors.FoliageLight;
+                createVoxel(x, y, z, color, Math.random() * 1.5 + 0.5);
+            }
+        }
+
+        function buildScene() {
+            buildHouse(-10, -12); 
+
+            const scale = 1.3; 
+            const sx = 10, sz = -15;
+            const secondaryHeight = Math.round(4 * scale);
+            
+            for (let x = 0; x < 8 * scale; x++) {
+                for (let y = 0; y < secondaryHeight; y++) {
+                    for (let z = 0; z < 5 * scale; z++) {
+                        createVoxel(sx + x, y, sz + z, Colors.StoneGrey); 
+                    }
+                }
+            }
+            for (let x = -1; x < 9 * scale; x++) {
+                for (let z = -1; z < 6 * scale; z++) {
+                    createVoxel(sx + x, secondaryHeight, sz + z, Colors.RoofOrange);
+                }
+            }
+
+            const towerBaseX = sx + Math.round(8 * scale);
+            const towerBaseZ = sz + Math.round(3 * scale);
+            const towerHeight = Math.round(10 * scale);
+            const towerRadius = 3;
+
+            for (let y = 0; y < towerHeight; y++) {
+                for (let angle = 0; angle < 2 * Math.PI; angle += Math.PI / 8) {
+                    const x = Math.round(towerBaseX + towerRadius * Math.cos(angle));
+                    const z = Math.round(towerBaseZ + towerRadius * Math.sin(angle));
+                    createVoxel(x, y, z, Colors.StoneGrey);
+                }
+            }
+            for (let x = -1; x < 2; x++) {
+                 for (let z = -1; z < 2; z++) {
+                     createVoxel(towerBaseX + x, towerHeight, towerBaseZ + z, Colors.RoofOrange);
+                 }
+            }
+            
+            buildFoliageAndGarden();
+        }
+
+        /**
+         * Animation loop: Handles sunflower swaying.
+         */
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const time = performance.now();
+            sunflowerGroups.forEach(group => {
+                const angle = group.swayAmplitude * Math.sin(time * group.swaySpeed + group.swayOffset);
+                group.rotation.z = angle; // Rotate around Z (side to side)
+            });
+            
+            controls.update(); 
+            renderer.render(scene, camera);
+        }
+
+        /**
+         * Handles window resize events.
+         */
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        window.onload = init;
+
+    </script>
+</body>
+</html>

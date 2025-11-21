@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jay's Art Collection</title>
+    <title>Jay's Art Collection - Homepage</title>
     
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
     <style>
-        /* Custom styles to enhance the voxel gallery feel */
+        /* Custom styles to enhance the voxel gallery feel (Shared Styles) */
         :root {
             --primary-color: #2c3e50; /* Darker blue-gray for text */
             --background-color: #e0f2f7; /* Lighter blue background */
-            --accent-color: #7fbcf2; /* Your provided light blue */
-            --secondary-accent-color: #4a90e2; /* A slightly deeper blue for contrast */
+            --accent-color: #7fbcf2; /* Light blue */
+            --secondary-accent-color: #4a90e2; /* Deeper blue for contrast */
             --border-color: #2c3e50; /* Dark borders for cartoon/voxel outline look */
             --shadow-color: #1a2633; /* Sharp dark shadow */
             --font-sans: "Inter", sans-serif; /* For all text */
@@ -42,7 +42,7 @@
             position: relative;
             border: 4px solid var(--border-color);
             box-shadow: 8px 8px 0px 0px var(--shadow-color); /* Deep, sharp shadow */
-            transition: all 0.1s ease; /* Faster transition for mechanical feel */
+            transition: all 0.1s ease; 
             cursor: pointer;
             background-color: #ffffff;
             border-radius: 0; /* Sharp edges for voxel look */
@@ -59,21 +59,9 @@
         }
         
         .gallery-card img {
-            border: 2px solid var(--border-color); /* Thicker image borders */
-            image-rendering: pixelated; /* Enhance pixel feel for images */
+            border: 2px solid var(--border-color); 
+            image-rendering: pixelated; 
             border-radius: 0;
-        }
-
-        .painting-link {
-            color: var(--secondary-accent-color);
-            text-decoration: none;
-            border-bottom: 2px solid var(--border-color);
-            padding: 2px;
-            transition: background-color 0.2s;
-        }
-        .painting-link:hover {
-            background-color: var(--accent-color);
-            color: white;
         }
 
         .app-header {
@@ -82,27 +70,26 @@
             padding: 1rem 0; 
         }
 
-        /* UPDATED: Main header now uses Inter, is heavy, bold, and spaced out */
         .app-header h1, .pixel-text {
-            font-family: var(--font-sans); /* Now readable Inter font */
-            font-weight: 900; /* Extra heavy weight */
+            font-family: var(--font-sans); 
+            font-weight: 900; 
             text-transform: uppercase;
-            letter-spacing: 0.1em; /* Spaced for prominence */
+            letter-spacing: 0.1em; 
             color: white; 
-            text-shadow: 3px 3px 0px var(--border-color); /* Hard outline shadow retained */
+            text-shadow: 3px 3px 0px var(--border-color); 
             font-size: clamp(1rem, 4vw, 2rem);
-            line-height: 1.2; /* Tightened line height */
+            line-height: 1.2; 
         }
         
         /* Voxel Button Styling */
         .voxel-btn {
-            font-family: var(--font-sans); /* Now readable Inter font */
-            font-weight: 800; /* Heavy weight */
+            font-family: var(--font-sans); 
+            font-weight: 800; 
             text-transform: uppercase;
             border: 3px solid var(--border-color);
             box-shadow: 4px 4px 0px 0px var(--shadow-color);
             transition: all 0.1s;
-            border-radius: 0; /* Sharp corners */
+            border-radius: 0; 
         }
         
         .voxel-btn:hover {
@@ -113,13 +100,6 @@
         .voxel-btn:active {
             transform: translate(2px, 2px);
             box-shadow: 2px 2px 0px 0px var(--shadow-color);
-        }
-
-        .back-button {
-            background-color: var(--secondary-accent-color);
-            color: white;
-            font-size: 0.7rem;
-            padding: 0.8rem 1.2rem;
         }
 
         .install-prompt-container {
@@ -138,7 +118,6 @@
             color: white;
         }
 
-        /* Headings within content - IMPROVED READABILITY */
         h2.content-heading {
             font-family: var(--font-sans); 
             font-weight: 800; 
@@ -150,26 +129,10 @@
             text-transform: uppercase;
             letter-spacing: 0.1em; 
         }
-        
-        /* New style for the H3 inside the detail card - PAINTINGS DISCOVERED */
-        .card-subheading {
-            font-family: var(--font-sans); /* Now readable Inter font */
-            font-weight: 800; /* Heavy weight */
-            text-transform: uppercase;
-            color: black; 
-            text-shadow: none; 
-            font-size: clamp(0.9rem, 3vw, 1.1rem); 
-            margin-bottom: 1.5rem; 
-            border-bottom: 4px solid var(--border-color);
-            padding-bottom: 0.5rem;
-        }
     </style>
 
-    <!-- 
-        PWA Manifest - Now linked externally for better PWA support.
-    -->
+    <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
-    <!-- Theme color for browser UI. Matches theme_color in manifest.json -->
     <meta name="theme-color" content="#4a90e2">
 
 </head>
@@ -178,34 +141,29 @@
     <div id="app" class="min-h-screen flex flex-col">
         <!-- Header -->
         <header class="app-header sticky top-0 z-10">
-            <!-- Ensure top/bottom padding is appropriate for mobile -->
             <div class="max-w-4xl mx-auto px-4 py-3 sm:py-4 flex justify-between items-center">
                 <h1 id="header-title" class="pixel-text">
-                    Jay's Art<br>Collection
+                    JAY'S ART<br>COLLECTION
                 </h1>
-                <button id="back-button" onclick="goToHome()" 
-                        class="hidden voxel-btn back-button">
-                    ← BACK
-                </button>
+                <!-- Back button is hidden on the home page -->
+                <a href="index.html" class="hidden voxel-btn back-button"></a>
             </div>
         </header>
 
         <!-- Main Content View -->
         <main class="max-w-4xl mx-auto px-4 py-8 flex-grow w-full">
             <div id="content-container">
-                <!-- Content injected by JavaScript -->
+                <!-- Content will be rendered here -->
             </div>
         </main>
         
-        <!-- PWA Install Banner/Modal - Optimized for mobile stacking and size -->
+        <!-- PWA Install Banner/Modal -->
         <div id="install-prompt-container" 
              class="install-prompt-container fixed bottom-0 left-0 w-full p-3 hidden z-20 text-center border-t-4 border-gray-900">
             <div class="max-w-4xl mx-auto flex flex-col sm:flex-row justify-between items-center w-full">
-                <!-- Text made smaller and margin reduced -->
                 <p class="text-xs mb-2 sm:mb-0 pixel-text text-gray-800 !text-shadow-none">
                     INSTALL APP TO YOUR DEVICE?
                 </p>
-                <!-- Buttons stacked vertically on small screen, then horizontal on sm+ -->
                 <div class="space-x-2 flex mt-2 sm:mt-0">
                     <button id="install-button" class="voxel-btn install-button py-1 px-3 text-xs">
                         INSTALL
@@ -220,7 +178,7 @@
 
 
     <script>
-        // --- 1. DATA STRUCTURE ---
+        // --- 1. DATA STRUCTURE (Only necessary for the home view) ---
         const data = {
             galleries: [
                 {
@@ -228,32 +186,19 @@
                     name: 'Orsay Museum, Paris',
                     subtitle: 'Impressionist and Post-Impressionist masterpieces.',
                     image: 'https://placehold.co/400x250/2c3e50/a7d9f7?text=Orsay+Gallery', 
-                    paintings: [
-                        // MODIFIED: externalUrl updated to TwoHorsesAndADog.html
-                        { id: 'bal_du_moulin', title: 'Two Horses and a Dog', externalUrl: 'TwoHorsesAndADog.html' },
-                        // RENAMED the painting below to "Old Lady Sitting"
-                        // UPDATED: externalUrl to match the new file name.
-                        { id: 'starry_night', title: 'Old Lady Sitting', externalUrl: 'OldLadySitting.html' },
-                        // ADDED: "Under the Parasol" linking to UnderTheParasol.html
-                        { id: 'under_parasol', title: 'Under the Parasol', externalUrl: 'UnderTheParasol.html' },
-                        // UPDATED: Removed '4' from the title
-                        { id: 'sunflowers', title: 'Sunflowers in Front of House', externalUrl: 'SunfloiwersInFrontOfHouse.html' }
-                    ]
+                    // CRUCIAL: Link is updated to the new standalone page
+                    pageUrl: 'orsay.html' 
                 }
                 // Future galleries will be added here
             ]
         };
 
         // --- 2. STATE & UI ELEMENTS ---
-        let currentView = 'home';
-        let selectedGalleryId = null;
-        let deferredInstallPrompt = null;
-        
         const contentContainer = document.getElementById('content-container');
-        const headerTitle = document.getElementById('header-title');
-        const backButton = document.getElementById('back-button');
         const installPromptContainer = document.getElementById('install-prompt-container');
         const installButton = document.getElementById('install-button');
+        let deferredInstallPrompt = null;
+
 
         // --- 3. RENDERING FUNCTIONS ---
 
@@ -261,18 +206,13 @@
          * Renders the main gallery list view.
          */
         function renderHomeView() {
-            currentView = 'home';
-            selectedGalleryId = null;
-            headerTitle.innerHTML = "JAY'S ART<br>COLLECTION"; 
-            backButton.classList.add('hidden');
-            
             let html = '<h2 class="content-heading">SELECT A GALLERY</h2>';
             html += '<div class="grid grid-cols-1 md:grid-cols-2 gap-8">';
             
             data.galleries.forEach(gallery => {
+                // The entire card is now a link to the standalone page
                 html += `
-                    <div class="gallery-card p-6 flex flex-col items-start" 
-                         onclick="goToGallery('${gallery.id}')">
+                    <a href="${gallery.pageUrl}" class="gallery-card p-6 flex flex-col items-start block no-underline text-inherit">
                         <div class="w-full border-2 border-gray-800 mb-4 bg-gray-100">
                              <img src="${gallery.image}" 
                                  onerror="this.onerror=null;this.src='https://placehold.co/150x100/2c3e50/a7d9f7?text=GALLERY'"
@@ -280,14 +220,13 @@
                                  class="w-full h-40 object-cover block">
                         </div>
                         <div class="w-full">
-                            <!-- Title already uses font-sans for readability -->
                             <h3 class="font-sans font-extrabold !text-primary-color !text-shadow-none text-sm sm:text-base mb-2 leading-tight">${gallery.name.toUpperCase()}</h3>
                             <p class="text-xs font-sans text-gray-600 mb-4 border-l-4 border-gray-300 pl-2">${gallery.subtitle}</p>
                             <button class="voxel-btn w-full bg-yellow-400 text-black py-2 text-xs hover:bg-yellow-300">
                                 ENTER GALLERY
                             </button>
                         </div>
-                    </div>
+                    </a>
                 `;
             });
             
@@ -295,67 +234,7 @@
             contentContainer.innerHTML = html;
         }
 
-        /**
-         * Renders the detail view for a specific gallery.
-         * @param {object} gallery - The gallery object to display.
-         */
-        function renderGalleryDetail(gallery) {
-            currentView = 'galleryDetail';
-            selectedGalleryId = gallery.id;
-            headerTitle.innerHTML = gallery.name.toUpperCase();
-            backButton.classList.remove('hidden');
-
-            let html = `
-                <!-- This H2 now uses a clean sans-serif font for better readability -->
-                <h2 class="content-heading">${gallery.subtitle.toUpperCase()}</h2>
-                <div class="detail-card p-6">
-                    <!-- This H3 uses the new card-subheading style -->
-                    <h3 class="card-subheading">
-                        PAINTINGS DISCOVERED
-                    </h3>
-                    <ul class="space-y-4">
-            `;
-
-            gallery.paintings.forEach((painting, index) => {
-                html += `
-                    <li class="flex flex-col sm:flex-row justify-between items-start sm:items-center py-3 border-b-2 border-dashed border-gray-300 last:border-b-0">
-                        <div class="flex items-center mb-2 sm:mb-0">
-                            <span class="font-sans font-bold text-xs mr-3 bg-gray-200 px-2 py-1 border border-gray-400">#${index + 1}</span>
-                            <span class="text-gray-800 font-bold text-sm font-sans">${painting.title}</span>
-                        </div>
-                        <a href="${painting.externalUrl}" target="_blank" class="voxel-btn bg-blue-100 text-blue-800 text-xs px-3 py-2 hover:bg-blue-200 flex items-center">
-                            VIEW
-                            <span class="ml-2">►</span>
-                        </a>
-                    </li>
-                `;
-            });
-
-            html += `
-                    </ul>
-                </div>
-            `;
-            contentContainer.innerHTML = html;
-        }
-
-        // --- 4. NAVIGATION LOGIC ---
-
-        function goToHome() {
-            renderHomeView();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function goToGallery(id) {
-            const gallery = data.galleries.find(g => g.id === id);
-            if (gallery) {
-                renderGalleryDetail(gallery);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            } else {
-                console.error('Gallery not found:', id);
-            }
-        }
-
-        // --- 5. PWA INSTALLATION LOGIC ---
+        // --- 4. PWA INSTALLATION LOGIC (Simplified) ---
 
         const INSTALL_PROMPT_KEY = 'installPromptStatus'; 
         const REJECT_TIMESTAMP_KEY = 'installPromptRejectTimestamp'; 
@@ -403,16 +282,14 @@
                 }
                 deferredInstallPrompt = null;
             } else {
-                // IMPORTANT: Using custom modal instead of alert() for mobile friendliness
-                // For this example, we'll log, but in a real app, a custom modal UI would display.
                 console.log("Use your browser's 'Add to Home Screen' to install.");
             }
         });
 
-        // --- 6. INITIALIZATION ---
+        // --- 5. INITIALIZATION ---
 
         window.onload = function() {
-            goToHome();
+            renderHomeView();
         };
 
     </script>

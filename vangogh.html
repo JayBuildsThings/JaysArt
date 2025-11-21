@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Van Gogh Museum, Amsterdam</title>
+    
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        /* Custom styles to enhance the voxel gallery feel (Shared Styles) */
+        :root {
+            --primary-color: #2c3e50; /* Darker blue-gray for text */
+            --background-color: #e0f2f7; /* Lighter blue background */
+            --accent-color: #f0b429; /* Deep Yellow/Gold for Van Gogh Theme */
+            --secondary-accent-color: #1a2633; /* Dark shadow/contrast */
+            --border-color: #2c3e50; /* Dark borders for cartoon/voxel outline look */
+            --shadow-color: #1a2633; /* Sharp dark shadow */
+            --font-sans: "Inter", sans-serif; /* For all text */
+        }
+
+        /* Google Fonts - Keep Inter as the main font */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap');
+
+        body {
+            font-family: var(--font-sans);
+            background-color: var(--background-color);
+            color: var(--primary-color);
+            min-height: 100vh;
+            line-height: 1.6;
+            
+            /* Voxel Grid Background Pattern (using a Van Gogh-esque yellow/blue blend) */
+            background-image: 
+                linear-gradient(rgba(240, 180, 41, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(240, 180, 41, 0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* Voxel-like card styling - Sharp Corners, Thick Borders */
+        .gallery-card, .detail-card {
+            position: relative;
+            border: 4px solid var(--border-color);
+            box-shadow: 8px 8px 0px 0px var(--shadow-color); /* Deep, sharp shadow */
+            transition: all 0.1s ease; 
+            background-color: #ffffff;
+            border-radius: 0; /* Sharp edges for voxel look */
+        }
+        
+        .app-header {
+            background-color: var(--accent-color);
+            border-bottom: 4px solid var(--border-color);
+            padding: 1rem 0; 
+        }
+
+        .app-header h1, .pixel-text {
+            font-family: var(--font-sans); 
+            font-weight: 900; 
+            text-transform: uppercase;
+            letter-spacing: 0.1em; 
+            color: white; 
+            text-shadow: 3px 3px 0px var(--border-color); 
+            font-size: clamp(1rem, 4vw, 2rem);
+            line-height: 1.2; 
+        }
+        
+        /* Voxel Button Styling */
+        .voxel-btn {
+            font-family: var(--font-sans); 
+            font-weight: 800; 
+            text-transform: uppercase;
+            border: 3px solid var(--border-color);
+            box-shadow: 4px 4px 0px 0px var(--shadow-color);
+            transition: all 0.1s;
+            border-radius: 0; 
+        }
+        
+        .voxel-btn:hover {
+            transform: translate(-1px, -1px);
+            box-shadow: 5px 5px 0px 0px var(--shadow-color);
+        }
+
+        .voxel-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px 0px var(--shadow-color);
+        }
+
+        .back-button {
+            background-color: var(--secondary-accent-color);
+            color: white;
+            font-size: 0.7rem;
+            padding: 0.8rem 1.2rem;
+        }
+
+        .install-prompt-container {
+            background-color: #fff;
+            border-top: 4px solid var(--border-color);
+            box-shadow: 0 -4px 0px 0px rgba(0,0,0,0.1);
+        }
+
+        .install-button {
+            background-color: var(--accent-color);
+            color: white;
+        }
+        
+        .close-prompt-button {
+            background-color: #ff6b6b; /* Red for close/cancel */
+            color: white;
+        }
+
+        h2.content-heading {
+            font-family: var(--font-sans); 
+            font-weight: 800; 
+            color: var(--primary-color);
+            border-bottom: 4px solid var(--border-color);
+            padding-bottom: 0.8rem;
+            margin-bottom: 1.5rem;
+            font-size: clamp(1.2rem, 4vw, 1.5rem); 
+            text-transform: uppercase;
+            letter-spacing: 0.1em; 
+        }
+        
+        /* New style for the H3 inside the detail card - PAINTINGS DISCOVERED */
+        .card-subheading {
+            font-family: var(--font-sans); 
+            font-weight: 800; 
+            text-transform: uppercase;
+            color: black; 
+            text-shadow: none; 
+            font-size: clamp(0.9rem, 3vw, 1.1rem); 
+            margin-bottom: 1.5rem; 
+            border-bottom: 4px solid var(--border-color);
+            padding-bottom: 0.5rem;
+        }
+    </style>
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#f0b429">
+
+</head>
+<body>
+
+    <div id="app" class="min-h-screen flex flex-col">
+        <!-- Header -->
+        <header class="app-header sticky top-0 z-10">
+            <div class="max-w-4xl mx-auto px-4 py-3 sm:py-4 flex justify-between items-center">
+                <!-- Title is fixed for Van Gogh -->
+                <h1 id="header-title" class="pixel-text">
+                    VAN GOGH MUSEUM<br>AMSTERDAM
+                </h1>
+                <!-- Back button links to the homepage (index.html) -->
+                <a href="index.html" class="voxel-btn back-button">
+                    ← BACK
+                </a>
+            </div>
+        </header>
+
+        <!-- Main Content View -->
+        <main class="max-w-4xl mx-auto px-4 py-8 flex-grow w-full">
+            <div id="content-container">
+                <!-- Content will be rendered here by JS -->
+            </div>
+        </main>
+        
+        <!-- PWA Install Banner/Modal -->
+        <div id="install-prompt-container" 
+             class="install-prompt-container fixed bottom-0 left-0 w-full p-3 hidden z-20 text-center border-t-4 border-gray-900">
+            <div class="max-w-4xl mx-auto flex flex-col sm:flex-row justify-between items-center w-full">
+                <p class="text-xs mb-2 sm:mb-0 pixel-text text-gray-800 !text-shadow-none">
+                    INSTALL APP TO YOUR DEVICE?
+                </p>
+                <div class="space-x-2 flex mt-2 sm:mt-0">
+                    <button id="install-button" class="voxel-btn install-button py-1 px-3 text-xs">
+                        INSTALL
+                    </button>
+                    <button id="close-prompt-button" class="voxel-btn close-prompt-button py-1 px-3 text-xs" onclick="hideInstallPrompt(true)">
+                        NOT NOW
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // --- 1. DATA STRUCTURE (Only for Van Gogh Gallery) ---
+        const vangoghGallery = {
+            id: 'vangogh',
+            name: 'Van Gogh Museum, Amsterdam',
+            subtitle: 'The largest collection of works by Vincent van Gogh.',
+            // Empty list to trigger 'Coming Soon' message
+            paintings: [] 
+        };
+
+        // --- 2. UI ELEMENTS ---
+        const contentContainer = document.getElementById('content-container');
+        const installPromptContainer = document.getElementById('install-prompt-container');
+        const installButton = document.getElementById('install-button');
+        let deferredInstallPrompt = null;
+
+
+        // --- 3. RENDERING FUNCTIONS ---
+
+        /**
+         * Renders the detail view for the Van Gogh gallery.
+         */
+        function renderGalleryDetail(gallery) {
+            let html = `
+                <h2 class="content-heading">${gallery.subtitle.toUpperCase()}</h2>
+                <div class="detail-card p-6">
+                    <h3 class="card-subheading">
+                        PAINTINGS DISCOVERED
+                    </h3>
+            `;
+
+            if (gallery.paintings.length === 0) {
+                // Display Coming Soon message
+                 html += `
+                    <div class="text-center py-16 bg-yellow-50 border-4 border-dashed border-gray-400">
+                        <h4 class="font-sans font-extrabold text-xl text-red-500 mb-2">
+                            COMING SOON!
+                        </h4>
+                        <p class="text-sm text-gray-700">
+                            The collection is currently being curated. Check back later for masterpieces from Van Gogh.
+                        </p>
+                    </div>
+                `;
+            } else {
+                html += '<ul class="space-y-4">';
+                gallery.paintings.forEach((painting, index) => {
+                    html += `
+                        <li class="flex flex-col sm:flex-row justify-between items-start sm:items-center py-3 border-b-2 border-dashed border-gray-300 last:border-b-0">
+                            <div class="flex items-center mb-2 sm:mb-0">
+                                <span class="font-sans font-bold text-xs mr-3 bg-gray-200 px-2 py-1 border border-gray-400">#${index + 1}</span>
+                                <span class="text-gray-800 font-bold text-sm font-sans">${painting.title}</span>
+                            </div>
+                            <a href="${painting.externalUrl}" target="_blank" class="voxel-btn bg-blue-100 text-blue-800 text-xs px-3 py-2 hover:bg-blue-200 flex items-center">
+                                VIEW
+                                <span class="ml-2">►</span>
+                            </a>
+                        </li>
+                    `;
+                });
+                html += '</ul>';
+            }
+
+            html += `
+                </div>
+            `;
+            contentContainer.innerHTML = html;
+        }
+
+        // --- 4. PWA INSTALLATION LOGIC (Simplified) ---
+
+        const INSTALL_PROMPT_KEY = 'installPromptStatus'; 
+        const REJECT_TIMESTAMP_KEY = 'installPromptRejectTimestamp'; 
+        const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
+
+        function shouldShowInstallPrompt() {
+            const status = localStorage.getItem(INSTALL_PROMPT_KEY);
+            const rejectTimestamp = parseInt(localStorage.getItem(REJECT_TIMESTAMP_KEY), 10);
+            
+            if (status === 'accepted') return false;
+            if (!status) return true; 
+            if (status === 'rejected') {
+                return (Date.now() - rejectTimestamp) > TEN_DAYS_MS;
+            }
+            return false; 
+        }
+
+        function hideInstallPrompt(wasRejected = false) {
+            installPromptContainer.classList.add('hidden');
+            if (wasRejected) {
+                localStorage.setItem(INSTALL_PROMPT_KEY, 'rejected');
+                localStorage.setItem(REJECT_TIMESTAMP_KEY, Date.now().toString());
+            } else {
+                localStorage.setItem(INSTALL_PROMPT_KEY, 'accepted');
+            }
+        }
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredInstallPrompt = e;
+            if (shouldShowInstallPrompt()) {
+                installPromptContainer.classList.remove('hidden');
+            }
+        });
+
+        installButton.addEventListener('click', async () => {
+            if (deferredInstallPrompt) {
+                deferredInstallPrompt.prompt();
+                const { outcome } = await deferredInstallPrompt.userChoice;
+                
+                if (outcome === 'accepted') {
+                    hideInstallPrompt(false); 
+                } else {
+                    hideInstallPrompt(true); 
+                }
+                deferredInstallPrompt = null;
+            } else {
+                console.log("Use your browser's 'Add to Home Screen' to install.");
+            }
+        });
+
+        // --- 5. INITIALIZATION ---
+
+        window.onload = function() {
+            renderGalleryDetail(vangoghGallery);
+        };
+
+    </script>
+</body>
+</html>
